@@ -11,6 +11,7 @@ $KINDS = [
     'faq' => ['FAQ', ['title' => 'Pertanyaan *', 'body' => 'Jawaban']],
     'news' => ['Pengumuman', ['title' => 'Judul *', 'body' => 'Isi', 'url' => 'Tautan (opsional)', 'extra' => 'Tampil untuk']],
     'download' => ['Unduhan (template, panduan)', ['title' => 'Nama file *', 'url' => 'File / URL']],
+    'moderator' => ['Moderator', ['title' => 'Nama (beserta gelar) *', 'body' => 'Afiliasi', 'subtitle' => 'Sesi yang dimoderatori (opsional, mis. Parallel Session A)']],
 ];
 $AUD = [
     'all' => 'Semua pendaftar (formulir terisi)', 'verified' => 'Pembayaran terverifikasi', 'unpaid' => 'Belum bayar / bukti ditolak', 'pending' => 'Menunggu verifikasi pembayaran',

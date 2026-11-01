@@ -146,11 +146,17 @@ function committeeCert($c)
     elseif (stripos($role, 'committee') === false) $role .= ' of the Organizing Committee';
     return [$c['title'], $c['body'], $role, certCode('CM', $c['id']), no('CM', $c['id'])];
 }
-/** Cari pemilik kode SP/CM untuk halaman verifikasi: [jenis, nama, afiliasi, peran] atau null. */
+function moderatorCert($c)
+{
+    $role = 'Moderator' . (trim((string)$c['subtitle']) !== '' ? ' of ' . trim($c['subtitle']) : '');
+    return [$c['title'], $c['body'], $role, certCode('MD', $c['id']), no('MD', $c['id'])];
+}
+/** Cari pemilik kode SP/CM/MD untuk halaman verifikasi: [jenis, nama, afiliasi, peran] atau null. */
 function findCertByCode($code)
 {
     if (strpos($code, 'SP') === 0) foreach (rows('speakers') as $i => $sp) { $x = speakerCert($sp, $i); if (hash_equals($x[3], $code)) return ['Pembicara', $x[0], $x[1], $x[2]]; }
     if (strpos($code, 'CM') === 0) foreach (items('committee') as $c) { $x = committeeCert($c); if (hash_equals($x[3], $code)) return ['Panitia', $x[0], $x[1], $x[2]]; }
+    if (strpos($code, 'MD') === 0) foreach (items('moderator') as $c) { $x = moderatorCert($c); if (hash_equals($x[3], $code)) return ['Moderator', $x[0], $x[1], $x[2]]; }
     return null;
 }
 

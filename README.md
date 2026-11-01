@@ -34,7 +34,7 @@ Ditulis dengan PHP + MySQL tanpa framework, sehingga bisa langsung diunggah ke s
 - Data naskah dikunci di formulir setelah review dimulai; naskah final (camera-ready) setelah diterima
 - Opsi naskah **Word saja** (DOC/DOCX) agar reviewer bisa berkomentar langsung di file
 - **Sertifikat reviewer** (Certificate of Appreciation, berisi jumlah naskah yang direview, terverifikasi QR)
-- **Sertifikat pembicara & panitia** dibuat admin dari tab Pembicara dan Konten → Komite (per orang atau cetak semua dalam satu PDF), terverifikasi QR
+- **Sertifikat pembicara, panitia & moderator** dibuat admin dari tab Pembicara, Konten → Komite, dan Konten → Moderator (per orang atau cetak semua dalam satu PDF), terverifikasi QR
 - **Pratinjau dokumen dalam popup** (sertifikat, LoA, invoice, dll.); admin dapat mempratinjau sertifikat peserta/presenter/reviewer dengan data contoh dari Pengaturan
 - **Notifikasi di aplikasi** (ikon lonceng) untuk peserta, reviewer, dan admin, selain email
 

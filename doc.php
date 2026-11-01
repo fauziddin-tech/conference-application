@@ -3,7 +3,7 @@
  * Admin dapat membuka pratinjau dengan data contoh: ?t=cert&preview=participant|presenter|reviewer[&signers=...] */
 $t = (string)($_GET['t'] ?? '');
 $preview = $u['role'] === 'admin' ? preg_replace('/[^a-z]/', '', (string)($_GET['preview'] ?? '')) : '';
-if ($preview && !in_array($preview, ['participant', 'presenter', 'reviewer', 'speaker', 'committee'], true)) $preview = '';
+if ($preview && !in_array($preview, ['participant', 'presenter', 'reviewer', 'speaker', 'committee', 'moderator'], true)) $preview = '';
 $CERTS = []; // sertifikat pembicara/panitia: daftar [name, inst, role, code, ref]
 $rowsText = function ($txt) { $o = []; foreach (preg_split('/\R/', (string)$txt) as $l) { $l = trim($l); if ($l !== '') $o[] = array_map('trim', explode('|', $l)); } return $o; };
 $signers = $preview && isset($_GET['signers']) ? $rowsText(mb_substr((string)$_GET['signers'], 0, 1000)) : rows('signers');
@@ -16,16 +16,18 @@ if ($preview) {
         'track' => '', 'coauthors' => '', 'pay_amount' => '-', 'pay_date' => date('Y-m-d'), 'pay_sender' => '', 'created_at' => date('Y-m-d H:i:s'), 'updated_at' => date('Y-m-d H:i:s'), 'checked_in_at' => date('Y-m-d H:i:s'), 'review_round' => 1];
     $P = ['institution' => 'Universitas Contoh', 'email' => 'jane.doe@example.com'];
     if ($preview === 'speaker') { $t = 'spcert'; $CERTS = [['Prof. Dr. John Smith, M.Ed.', 'University of Example', 'Keynote Speaker', 'SPPREVIEW001', 'SP01']]; }
+    elseif ($preview === 'moderator') { $t = 'mdcert'; $CERTS = [['Dr. Ahmad Rahman, M.Pd.', 'Universitas Contoh', 'Moderator of Parallel Session A', 'MDPREVIEW001', 'MD01']]; }
     elseif ($preview === 'committee') { $t = 'cmcert'; $CERTS = [['Dr. Siti Aminah, M.Pd.', 'Universitas Contoh', 'Secretary — Organizing Committee', 'CMPREVIEW001', 'CM01']]; }
     elseif ($preview === 'reviewer') { $t = 'revcert'; $RV = ['id' => 0, 'name' => 'Prof. Dr. John Smith, M.Ed.', 'institution' => 'Universitas Contoh', 'cert_code' => 'RVPREVIEW001']; $nrev = 3; }
     else $t = 'cert';
-} elseif ($t === 'spcert' || $t === 'cmcert') {
+} elseif ($t === 'spcert' || $t === 'cmcert' || $t === 'mdcert') {
     if ($u['role'] !== 'admin') { http_response_code(403); die('Akses ditolak'); }
     $all = !empty($_GET['all']);
     if ($t === 'spcert') {
         foreach (rows('speakers') as $i => $sp) if ($all || $i === (int)($_GET['i'] ?? -1)) $CERTS[] = speakerCert($sp, $i);
     } else {
-        foreach (items('committee') as $c) if ($all || (int)$c['id'] === (int)($_GET['id'] ?? 0)) $CERTS[] = committeeCert($c);
+        $kind = $t === 'mdcert' ? 'moderator' : 'committee';
+        foreach (items($kind) as $c) if ($all || (int)$c['id'] === (int)($_GET['id'] ?? 0)) $CERTS[] = $kind === 'moderator' ? moderatorCert($c) : committeeCert($c);
     }
     if (!$CERTS) { http_response_code(404); die('Data tidak ditemukan.'); }
 } elseif ($t === 'revcert') {
@@ -42,10 +44,10 @@ if ($preview) {
     if (!$R) { http_response_code(404); die('Data pendaftaran tidak ditemukan.'); }
     $q = $pdo->prepare("SELECT * FROM users WHERE id=?"); $q->execute([$R['user_id']]); $P = $q->fetch();
 }
-$titles = ['spcert' => 'Speaker Certificate', 'cmcert' => 'Committee Certificate', 'invoice' => 'Invoice', 'receipt' => 'Payment Receipt', 'loa' => 'Letter of Acceptance', 'invitation' => 'Invitation Letter', 'badge' => 'E-Ticket & Name Badge', 'cert' => 'Certificate', 'revcert' => 'Reviewer Certificate'];
-if ($t === 'spcert' || $t === 'cmcert') {
+$titles = ['spcert' => 'Speaker Certificate', 'cmcert' => 'Committee Certificate', 'mdcert' => 'Moderator Certificate', 'invoice' => 'Invoice', 'receipt' => 'Payment Receipt', 'loa' => 'Letter of Acceptance', 'invitation' => 'Invitation Letter', 'badge' => 'E-Ticket & Name Badge', 'cert' => 'Certificate', 'revcert' => 'Reviewer Certificate'];
+if ($t === 'spcert' || $t === 'cmcert' || $t === 'mdcert') {
     $name = $CERTS[0][0]; $ref = count($CERTS) > 1 ? count($CERTS) . ' sertifikat' : $CERTS[0][4]; $pres = false; $verifyUrl = '';
-    $back = $preview ? 'admin/?p=setting#sertifikat' : ($t === 'spcert' ? 'admin/?p=pembicara' : 'admin/?p=konten&k=committee');
+    $back = $preview ? 'admin/?p=setting#sertifikat' : ($t === 'spcert' ? 'admin/?p=pembicara' : 'admin/?p=konten&k=' . ($t === 'mdcert' ? 'moderator' : 'committee'));
 } elseif ($t === 'revcert') {
     $name = $RV['name']; $verifyUrl = absUrl('verify.php?c=' . $RV['cert_code']); $ref = no('RV', $RV['id']); $pres = false;
     $back = $u['role'] === 'admin' ? ($preview ? 'admin/?p=setting#sertifikat' : 'admin/?p=pengguna&role=reviewer') : 'reviewer.php';
@@ -96,7 +98,7 @@ table{width:100%;border-collapse:collapse;margin:16px 0}th,td{border:1px solid #
 .wm{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:5}.wm span{font:800 clamp(60px,12vw,150px) system-ui,sans-serif;letter-spacing:.08em;color:rgba(180,35,35,.13);transform:rotate(-22deg)}
 body.embed .bar{display:none}body.embed .page{margin:12px auto}
 .cert .award{font:italic 1.05rem Georgia,serif;color:#444;max-width:205mm}
-@media print{body{background:#fff}.bar{display:none}.page{margin:0;box-shadow:none;width:auto;min-height:auto}@page{size:A4 <?= in_array($t, ['cert', 'revcert', 'spcert', 'cmcert'], true) ? 'landscape' : 'portrait' ?>;margin:0}}
+@media print{body{background:#fff}.bar{display:none}.page{margin:0;box-shadow:none;width:auto;min-height:auto}@page{size:A4 <?= in_array($t, ['cert', 'revcert', 'spcert', 'cmcert', 'mdcert'], true) ? 'landscape' : 'portrait' ?>;margin:0}}
 @media (max-width:820px){.page{width:100%;min-height:0;padding:16px;margin:0}.cert .frame{padding:8mm}}
 </style></head><body>
 <div class="bar"><span><?= e($titles[$t]) ?> &middot; <?= $preview ? 'PRATINJAU (data contoh)' : e($ref) ?></span><span><button onclick="window.print()">Cetak / Simpan PDF</button> <a class="back" href="<?= e(BASE . $back) ?>">Kembali</a></span></div>
@@ -170,11 +172,11 @@ body.embed .bar{display:none}body.embed .page{margin:12px auto}
 <div class="signs"><?php foreach (array_slice($signers ?: [$s1], 0, 3) as $s): ?><div><p><?= e($s[1] ?? '') ?></p><div class="sp"></div><p><b><u><?= e($s[0]) ?></u></b></p></div><?php endforeach; ?></div>
 <div class="qr" data-qr="<?= e($verifyUrl) ?>"></div><div class="no">No. CERT/<?= e(brand()) ?>/<?= e($ref) ?><br>Verify: <?= e($verifyUrl) ?></div></div></div>
 <?php endif; ?>
-<?php if ($t === 'spcert' || $t === 'cmcert'): foreach ($CERTS as [$cn, $ci, $cr, $cc, $cref]): $vu = absUrl('verify.php?c=' . $cc); ?>
+<?php if ($t === 'spcert' || $t === 'cmcert' || $t === 'mdcert'): foreach ($CERTS as [$cn, $ci, $cr, $cc, $cref]): $vu = absUrl('verify.php?c=' . $cc); ?>
 <div class="page cert"><div class="frame"><?php if (setting('logo_url')): ?><img class="lg" src="<?= e(imgSrc(setting('logo_url'))) ?>" alt=""><?php endif; ?>
 <h1>CERTIFICATE</h1><h2>of Appreciation</h2>
 <p>This certificate is proudly presented to</p><div class="who"><?= e($cn) ?></div><p><?= e($ci) ?></p>
-<p class="award"><?= $t === 'spcert' ? 'in recognition of the valuable contribution as' : 'in recognition of the dedication and valuable contribution as' ?> <b><?= e($cr) ?></b> <?= $t === 'spcert' ? 'at' : 'of' ?> the<br><b><?= e(setting('name')) ?></b><br><?= e(setting('tagline')) ?><br>held on <?= e(setting('date')) ?> at <?= e(setting('location')) ?>.</p>
+<p class="award"><?= $t === 'cmcert' ? 'in recognition of the dedication and valuable contribution as' : 'in recognition of the valuable contribution as' ?> <b><?= e($cr) ?></b> <?= $t === 'cmcert' ? 'of' : 'at' ?> the<br><b><?= e(setting('name')) ?></b><br><?= e(setting('tagline')) ?><br>held on <?= e(setting('date')) ?> at <?= e(setting('location')) ?>.</p>
 <div class="signs"><?php foreach (array_slice($signers ?: [$s1], 0, 3) as $s): ?><div><p><?= e($s[1] ?? '') ?></p><div class="sp"></div><p><b><u><?= e($s[0]) ?></u></b></p></div><?php endforeach; ?></div>
 <div class="qr" data-qr="<?= e($vu) ?>"></div><div class="no">No. CERT/<?= e(brand()) ?>/<?= e($cref) ?><br>Verify: <?= e($vu) ?></div></div></div>
 <?php endforeach; endif; ?>

@@ -7,7 +7,7 @@ if ($c !== '') {
         hit('verify:' . ip());
         $q = $pdo->prepare("SELECT r.*,u.institution FROM registrations r JOIN users u ON u.id=r.user_id WHERE r.ticket=?"); $q->execute([$c]); $R = $q->fetch();
         if (!$R && strpos($c, 'RV') === 0) { $q = $pdo->prepare("SELECT id,name,institution FROM users WHERE cert_code=? AND role='reviewer'"); $q->execute([$c]); $RVW = $q->fetch(); }
-        if (!$R && empty($RVW) && preg_match('/^(SP|CM)/', $c)) $OTH = findCertByCode($c);
+        if (!$R && empty($RVW) && preg_match('/^(SP|CM|MD)/', $c)) $OTH = findCertByCode($c);
         if (!$R && empty($RVW) && empty($OTH)) $err = 'Kode tidak ditemukan. Pastikan kode yang dimasukkan benar.';
     }
 }
