@@ -9,6 +9,8 @@ $cb = function ($k, $l) { return '<label class="chk full"><input type="checkbox"
 <?= $cb('cert_open', '<b>Buka unduhan e-certificate</b> (aktifkan setelah acara)') ?>
 <?= $cb('cert_checkin', 'Peserta offline wajib check-in untuk mendapat sertifikat') ?>
 <?= $cb('blind_review', 'Blind review (identitas penulis disembunyikan dari reviewer)') ?>
+<?= $cb('paper_word_only', 'Naskah & revisi hanya format Word (DOC/DOCX) agar reviewer bisa memberi komentar langsung di file') ?>
+<?= $in('review_days', 'Tenggat review bawaan (hari)', 'number') ?>
 <h3>Identitas Konferensi</h3>
 <?= $in('name', 'Nama Konferensi') ?><?= $in('tagline', 'Tagline / Tema') ?><?= $in('organizer', 'Penyelenggara') ?>
 <label>Logo <small>(JPG/PNG/WEBP; dipakai di navigasi, dokumen &amp; sertifikat)</small><input type="file" name="logo" accept="image/jpeg,image/png,image/webp"><?php if (setting('logo_url')): ?><img class="thumb" src="<?= e(imgSrc(setting('logo_url'))) ?>" alt=""><?php endif; ?></label>

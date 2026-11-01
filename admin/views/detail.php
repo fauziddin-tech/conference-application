@@ -17,15 +17,16 @@ if (!$x['article_title']) foreach (['Track', 'Judul artikel', 'Co-authors', 'Key
 <div class="scroll"><table><?php foreach ($info as $k => $v): ?><tr><th style="width:220px"><?= e($k) ?></th><td><?= $v ?></td></tr><?php endforeach; ?></table></div>
 
 <?php if ($x['article_title']):
-    $rv = $pdo->prepare("SELECT v.*,u.name FROM reviews v JOIN users u ON u.id=v.reviewer_id WHERE v.reg_id=? ORDER BY v.id"); $rv->execute([$x['id']]); $rv = $rv->fetchAll();
-    $avail = $pdo->prepare("SELECT id,name,institution FROM users WHERE role='reviewer' AND id NOT IN(SELECT reviewer_id FROM reviews WHERE reg_id=?) ORDER BY name"); $avail->execute([$x['id']]); $avail = $avail->fetchAll(); ?>
-<h3>Peer Review</h3>
-<?php if (!$rv): ?><p>Belum ada reviewer yang ditugaskan.</p><?php endif; ?>
-<?php foreach ($rv as $r): ?><div class="review"><b><?= e($r['name']) ?></b> &middot; <?= $r['submitted_at'] ? 'Skor <b>' . (int)$r['score'] . '/5</b> &middot; <span class="badge">' . e(lbl($REC, $r['recommendation'])) . '</span> &middot; <small>' . e($r['submitted_at']) . '</small>' : '<span class="badge pending">Belum mereview</span>' ?>
-<?php if ($r['submitted_at']): ?><p><small>Untuk penulis:</small><br><?= nl2br(e($r['to_author'])) ?></p><?php if ($r['to_committee']): ?><p><small>Rahasia untuk panitia:</small><br><?= nl2br(e($r['to_committee'])) ?></p><?php endif; endif; ?>
-<form method="post" class="inline" onsubmit="return confirm('Hapus penugasan reviewer ini (beserta reviewnya)?')"><?= csrf() ?><input type="hidden" name="a" value="unassign"><input type="hidden" name="id" value="<?= $x['id'] ?>"><input type="hidden" name="reviewer" value="<?= $r['reviewer_id'] ?>"><button class="link">Hapus penugasan</button></form></div><?php endforeach; ?>
-<?php if ($avail): ?><form method="post" class="filters"><?= csrf() ?><input type="hidden" name="a" value="assign"><input type="hidden" name="id" value="<?= $x['id'] ?>"><select name="reviewer" required><option value="">-- pilih reviewer --</option><?php foreach ($avail as $r): ?><option value="<?= $r['id'] ?>"><?= e($r['name'] . ($r['institution'] ? ' (' . $r['institution'] . ')' : '')) ?></option><?php endforeach; ?></select><button class="btn">Tugaskan Reviewer</button></form>
+    $cur = (int)$x['review_round'];
+    $avail = $pdo->prepare("SELECT id,name,institution FROM users WHERE role='reviewer' AND id NOT IN(SELECT reviewer_id FROM reviews WHERE reg_id=? AND round=?) ORDER BY name"); $avail->execute([$x['id'], $cur]); $avail = $avail->fetchAll();
+    $now = reviewsOf($x['id'], $cur); ?>
+<h3>Peer Review &middot; Ronde <?= $cur ?></h3>
+<?php if (!$now): ?><p>Belum ada reviewer pada ronde ini.</p><?php else: ?><p><?php foreach ($now as $r): ?><span class="chip"><?= e($r['name']) ?> <?= $r['submitted_at'] ? '&#10004;' : '&#9203;' ?>
+<form method="post" class="inline" onsubmit="return confirm('Hapus penugasan reviewer ini pada ronde <?= $cur ?> (beserta reviewnya)?')"><?= csrf() ?><input type="hidden" name="a" value="unassign"><input type="hidden" name="id" value="<?= $x['id'] ?>"><input type="hidden" name="reviewer" value="<?= $r['reviewer_id'] ?>"><button class="link" title="Hapus penugasan">&times;</button></form></span> <?php endforeach; ?></p><?php endif; ?>
+<?php if ($avail): ?><form method="post" class="filters"><?= csrf() ?><input type="hidden" name="a" value="assign"><input type="hidden" name="id" value="<?= $x['id'] ?>"><select name="reviewer" required><option value="">-- pilih reviewer --</option><?php foreach ($avail as $r): ?><option value="<?= $r['id'] ?>"><?= e($r['name'] . ($r['institution'] ? ' (' . $r['institution'] . ')' : '')) ?></option><?php endforeach; ?></select><label class="nowrap" style="margin:0">Tenggat <input type="date" name="due" value="<?= date('Y-m-d', strtotime('+' . max(1, (int)setting('review_days', '14')) . ' days')) ?>" style="width:auto;display:inline-block"></label><button class="btn">Tugaskan Reviewer</button></form>
 <?php else: ?><p><small>Tambahkan akun reviewer di tab <a href="?p=pengguna">Akun</a>.</small></p><?php endif; ?>
+<h3>Riwayat Naskah &amp; Review</h3>
+<?php paperHistory($x, 'admin'); ?>
 <?php endif; ?>
 
 <h3>Verifikasi &amp; Keputusan</h3>

@@ -38,8 +38,8 @@ if ($p === 'exportreg') csvOut('registrasi-' . date('Ymd') . '.csv',
     $pdo->query("SELECT CONCAT('R',LPAD(r.id,4,'0')),r.prefix,r.full_name,u.email,u.institution,r.country,r.phone,r.orcid,r.category,r.attendance,r.track,r.article_title,r.coauthors,r.keywords,IF(r.article_title<>'',r.paper_status,''),IF(r.camera_file<>'','ya',''),r.pay_amount,r.pay_date,r.pay_sender,r.pay_status,r.ticket,r.checked_in_at,r.dietary,r.created_at FROM registrations r JOIN users u ON u.id=r.user_id ORDER BY r.id")->fetchAll());
 if ($p === 'export') csvOut('akun-' . date('Ymd') . '.csv', ['ID', 'Peran', 'Kategori', 'Nama', 'Email', 'Institusi', 'HP', 'Status', 'Daftar', 'Login terakhir'],
     $pdo->query("SELECT CONCAT('U',LPAD(id,4,'0')),role,category,name,email,institution,phone,status,created_at,last_login FROM users WHERE role<>'admin' ORDER BY id")->fetchAll());
-if ($p === 'exportrev') csvOut('review-' . date('Ymd') . '.csv', ['Paper', 'Judul', 'Reviewer', 'Skor', 'Rekomendasi', 'Komentar penulis', 'Catatan panitia', 'Dikirim'],
-    $pdo->query("SELECT CONCAT('R',LPAD(r.id,4,'0')),r.article_title,u.name,v.score,v.recommendation,v.to_author,v.to_committee,v.submitted_at FROM reviews v JOIN registrations r ON r.id=v.reg_id JOIN users u ON u.id=v.reviewer_id ORDER BY r.id")->fetchAll());
+if ($p === 'exportrev') csvOut('review-' . date('Ymd') . '.csv', ['Paper', 'Judul', 'Ronde', 'Reviewer', 'Skor', 'Rekomendasi', 'Komentar penulis', 'Catatan panitia', 'Dikirim'],
+    $pdo->query("SELECT CONCAT('R',LPAD(r.id,4,'0')),r.article_title,v.round,u.name,v.score,v.recommendation,v.to_author,v.to_committee,v.submitted_at FROM reviews v JOIN registrations r ON r.id=v.reg_id JOIN users u ON u.id=v.reviewer_id ORDER BY r.id,v.round")->fetchAll());
 
 /* ---------- aksi (POST) ---------- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -50,8 +50,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare("UPDATE users SET status=? WHERE id=? AND role='peserta'")->execute([$st, $id]); break;
     case 'del':
         $q = $pdo->prepare("SELECT id,article_file,pay_file,camera_file FROM registrations WHERE user_id=?"); $q->execute([$id]);
-        if ($r0 = $q->fetch()) { rmPriv($r0['article_file']); rmPriv($r0['pay_file']); rmPriv($r0['camera_file']); $pdo->prepare("DELETE FROM reviews WHERE reg_id=?")->execute([$r0['id']]); }
+        if ($r0 = $q->fetch()) { deletePaper($r0['id']); rmPriv($r0['article_file']); rmPriv($r0['pay_file']); rmPriv($r0['camera_file']); }
+        $q = $pdo->prepare("SELECT file FROM reviews WHERE reviewer_id=?"); $q->execute([$id]); foreach ($q->fetchAll(PDO::FETCH_COLUMN) as $f) rmPriv($f);
         $pdo->prepare("DELETE FROM reviews WHERE reviewer_id=?")->execute([$id]);
+        $pdo->prepare("DELETE FROM notifications WHERE user_id=?")->execute([$id]);
         $pdo->prepare("DELETE FROM registrations WHERE user_id=?")->execute([$id]);
         $pdo->prepare("DELETE FROM users WHERE id=? AND role IN('peserta','reviewer')")->execute([$id]);
         $msg = 'Akun dihapus.'; break;
@@ -100,6 +102,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare("UPDATE registrations SET pay_status=?,paper_status=?,admin_note=? WHERE id=?")->execute([$ps, $pp, $note, $id]);
         $pdo->prepare("UPDATE users SET status=? WHERE id=?")->execute([['unpaid' => 'pending', 'pending' => 'pending', 'verified' => 'confirmed', 'rejected' => 'rejected'][$ps], $old['user_id']]);
         $nm = trim(($old['prefix'] === 'Other' ? '' : $old['prefix']) . ' ' . $old['full_name']); $sent = [];
+        if ($ps !== $old['pay_status'] && in_array($ps, ['verified', 'rejected'], true)) notifyUser($old['user_id'], $ps === 'verified' ? 'Pembayaran ' . no('R', $id) . ' terverifikasi. Kwitansi, e-ticket & surat undangan tersedia.' : 'Bukti bayar ' . no('R', $id) . ' ditolak. Lihat catatan panitia.', 'dashboard.php');
+        if ($old['article_title'] && $pp !== $old['paper_status'] && in_array($pp, ['revision', 'accepted', 'rejected'], true)) notifyUser($old['user_id'], 'Keputusan naskah ' . no('R', $id) . ': ' . lbl($PAPER, $pp) . '. Lihat komentar reviewer.', 'dashboard.php#paper');
         if (!empty($_POST['notify'])) {
             $nt = $note !== '' ? "\n\nNote from the committee:\n$note" : '';
             if ($ps !== $old['pay_status'] && $ps === 'verified') $sent[] = notify($old['email'], $nm, 'Payment verified', "Your payment for registration " . no('R', $id) . " has been verified. Your receipt, e-ticket (QR code for check-in), and invitation letter are now available in your dashboard." . ($old['attendance'] === 'Online' && setting('online_link') ? "\n\nThe online meeting link is available in your dashboard." : '') . $nt);
@@ -116,13 +120,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $back = '?p=detail&id=' . $id; $rid = (int)($_POST['reviewer'] ?? 0);
         $q = $pdo->prepare("SELECT name,email FROM users WHERE id=? AND role='reviewer'"); $q->execute([$rid]); $rv = $q->fetch();
         if (!$rv) { $msg = 'Pilih reviewer.'; break; }
-        $pdo->prepare("INSERT IGNORE INTO reviews(reg_id,reviewer_id) VALUES(?,?)")->execute([$id, $rid]);
+        $q = $pdo->prepare("SELECT article_title,review_round FROM registrations WHERE id=?"); $q->execute([$id]); $pr = $q->fetch();
+        $due = preg_match('/^\d{4}-\d{2}-\d{2}$/', post('due')) ? post('due') : date('Y-m-d', strtotime('+' . max(1, (int)setting('review_days', '14')) . ' days'));
+        $pdo->prepare("INSERT IGNORE INTO reviews(reg_id,reviewer_id,round,due_date) VALUES(?,?,?,?)")->execute([$id, $rid, $pr['review_round'], $due]);
         $pdo->prepare("UPDATE registrations SET paper_status='under_review' WHERE id=? AND paper_status='submitted'")->execute([$id]);
-        $q = $pdo->prepare("SELECT article_title FROM registrations WHERE id=?"); $q->execute([$id]);
-        $ok = notify($rv['email'], $rv['name'], 'Review request ' . no('R', $id), "You have been assigned to review the paper \"" . $q->fetchColumn() . "\" (" . no('R', $id) . ").\n\nPlease log in to submit your review:\n" . absUrl('reviewer.php?id=' . $id));
+        notifyUser($rid, 'Permintaan review ' . no('R', $id) . ' (ronde ' . $pr['review_round'] . '), tenggat ' . fdate($due), 'reviewer.php?id=' . $id);
+        $ok = notify($rv['email'], $rv['name'], 'Review request ' . no('R', $id), "You have been assigned to review the paper \"" . $pr['article_title'] . "\" (" . no('R', $id) . ", round " . $pr['review_round'] . ").\n\nPlease submit your review by " . fdateEn($due) . ". You may write comments directly in the manuscript file (Word comments / track changes) and upload it with your review.\n\n" . absUrl('reviewer.php?id=' . $id));
         $msg = 'Reviewer ditugaskan' . ($ok ? ' dan diberi tahu via email.' : ' (email notifikasi gagal terkirim).'); break;
     case 'unassign':
-        $back = '?p=detail&id=' . $id; $pdo->prepare("DELETE FROM reviews WHERE reg_id=? AND reviewer_id=?")->execute([$id, (int)($_POST['reviewer'] ?? 0)]); $msg = 'Penugasan reviewer dihapus.'; break;
+        $back = '?p=detail&id=' . $id;
+        $q = $pdo->prepare("SELECT v.id,v.file FROM reviews v JOIN registrations r ON r.id=v.reg_id AND v.round=r.review_round WHERE v.reg_id=? AND v.reviewer_id=?"); $q->execute([$id, (int)($_POST['reviewer'] ?? 0)]);
+        if ($v0 = $q->fetch()) { rmPriv($v0['file']); $pdo->prepare("DELETE FROM reviews WHERE id=?")->execute([$v0['id']]); }
+        $msg = 'Penugasan reviewer pada ronde ini dihapus.'; break;
     case 'agenda': case 'agedit':
         $v = [post('day'), post('time'), post('title'), post('speaker'), post('room'), post('track'), post('description')];
         if ($v[0] === '' || $v[2] === '') { $msg = 'Hari dan judul sesi wajib diisi.'; break; }
@@ -189,7 +198,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     case 'set':
         foreach (['name', 'tagline', 'organizer', 'date', 'time', 'event_start', 'event_end', 'timezone', 'location', 'venue_info', 'venue_url', 'map_url', 'website', 'email', 'mail_from', 'logo_url', 'submission_url', 'about', 'cfp_info', 'fees', 'early_deadline', 'payment_info', 'invoice_note', 'supporters', 'benefits', 'contacts', 'secretariat', 'online_link', 'online_info', 'signers', 'abs_min', 'abs_max', 'reg_close_msg', 'turnstile_site', 'turnstile_secret', 'blocked_domains', 'mail_from_name'] as $k)
             if (isset($_POST[$k])) setSetting($k, trim((string)$_POST[$k]));
-        foreach (['reg_open', 'cert_open', 'cert_checkin', 'blind_review'] as $k) setSetting($k, empty($_POST[$k]) ? '0' : '1');
+        foreach (['reg_open', 'cert_open', 'cert_checkin', 'blind_review', 'paper_word_only'] as $k) setSetting($k, empty($_POST[$k]) ? '0' : '1');
+        if (isset($_POST['review_days'])) setSetting('review_days', (string)max(1, min(90, (int)$_POST['review_days'])));
         if (isset($_POST['mail_driver'])) setSetting('mail_driver', post('mail_driver') === 'resend' ? 'resend' : 'mail');
         if (!empty($_POST['resend_key_clear'])) setSetting('resend_key', '');
         elseif (post('resend_key') !== '') {

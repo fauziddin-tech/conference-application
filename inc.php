@@ -5,6 +5,7 @@
 if (!file_exists(__DIR__ . '/config.php')) { header('Location: install/'); exit; }
 require __DIR__ . '/config.php';
 require_once __DIR__ . '/lib/schema.php';
+require_once __DIR__ . '/lib/paper.php';
 
 $HTTPS = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ($_SERVER['SERVER_PORT'] ?? '') == '443' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
 if (session_status() === PHP_SESSION_NONE) {
@@ -337,7 +338,7 @@ function head($t, $extra = '')
 <a class="skip" href="#main">Lewati ke konten</a>
 <nav><a class="brand" href="<?= $H ?>"><?php if (setting('logo_url')): ?><img src="<?= e(imgSrc(setting('logo_url'))) ?>" alt=""><?php endif; ?><?= e(brand()) ?></a><button class="burger" type="button" aria-label="Menu" aria-expanded="false" onclick="var n=this.parentNode;n.classList.toggle('open');this.setAttribute('aria-expanded',n.classList.contains('open'))">&#9776;</button><div class="links">
 <a href="<?= $H ?>#about">About</a><a href="<?= $H ?>#speakers">Speakers</a><a href="<?= $H ?>#cfp">Call for Papers</a><a href="<?= $H ?>#program">Program</a><a href="<?= $H ?>#register">Registration</a><a href="<?= $H ?>#venue">Venue</a><?php if (setting('journals')): ?><a href="<?= $H ?>#publication">Publication</a><?php endif; ?><a href="<?= $H ?>#contact">Contact</a><?php if (setting('submission_url')): ?><a href="<?= e(setting('submission_url')) ?>" target="_blank" rel="noopener">Make Submission</a><?php endif; ?>
-<?php if ($u): ?><?php if ($u['role'] === 'admin'): ?><a href="<?= $H ?>admin/">Admin</a><?php elseif ($u['role'] === 'reviewer'): ?><a href="<?= $H ?>reviewer.php">Review</a><?php else: ?><a href="<?= $H ?>dashboard.php">Dashboard</a><?php endif; ?><a href="<?= $H ?>logout.php?t=<?= token() ?>">Keluar (<?= e(mb_strimwidth($u['name'], 0, 20, '…')) ?>)</a>
+<?php if ($u): ?><?php if ($u['role'] === 'admin'): ?><a href="<?= $H ?>admin/">Admin</a><?php elseif ($u['role'] === 'reviewer'): ?><a href="<?= $H ?>reviewer.php">Review</a><?php else: ?><a href="<?= $H ?>dashboard.php">Dashboard</a><?php endif; ?><?php $nn = unreadCount($u['id']); ?><a href="<?= $H ?>notifikasi.php" class="bell" aria-label="Notifikasi<?= $nn ? ' (' . $nn . ' belum dibaca)' : '' ?>">&#128276;<?php if ($nn): ?><b><?= $nn > 99 ? '99+' : $nn ?></b><?php endif; ?></a><a href="<?= $H ?>logout.php?t=<?= token() ?>">Keluar (<?= e(mb_strimwidth($u['name'], 0, 20, '…')) ?>)</a>
 <?php else: ?><a href="<?= $H ?>login.php">Masuk</a><a class="btn" href="<?= $H ?>register.php">Daftar</a><?php endif; ?></div></nav>
 <?php if (!$u && regOpen()): ?><div id="regm" class="modal" hidden><div class="mbox" role="dialog" aria-modal="true" aria-labelledby="regmt"><button type="button" class="mx" aria-label="Tutup" onclick="document.getElementById('regm').hidden=true">&times;</button>
 <h3 id="regmt">Buat Akun Peserta</h3><p><small>Langkah 1 dari 2. Setelah akun dibuat, Anda langsung diarahkan ke formulir pendaftaran konferensi.</small></p>

@@ -200,3 +200,15 @@ form.settings>h3{margin:18px 0 4px;padding-top:10px;border-top:1px solid var(--l
 form.card>.chk{grid-column:1/-1}
 @media print{nav,footer,.totop,.skip{display:none}}
 .tag.spam{background:#b42323;color:#fff}.cf-turnstile{margin:6px 0 10px}
+/* ===== v5: riwayat naskah, ronde review, notifikasi ===== */
+.history{display:flex;flex-direction:column;gap:12px;margin:8px 0}
+.history .round{border:1px solid var(--line);border-radius:12px;padding:12px 16px;background:var(--card)}
+.history .round h4{margin:0 0 8px;font-family:system-ui,sans-serif;color:var(--c)}
+.hv{padding:6px 0;border-bottom:1px dashed var(--line)}.hv:last-child{border-bottom:0}.hv.final{border:1px solid var(--teal);border-radius:10px;padding:8px 12px;background:var(--card)}
+.vtag{display:inline-block;min-width:34px;text-align:center;font:800 .75rem system-ui,sans-serif;background:var(--deep);color:#fff;border-radius:6px;padding:1px 6px}
+.hv .note{margin:6px 0 2px 40px;padding:8px 12px;border-left:3px solid var(--teal);background:var(--bg);border-radius:6px}
+.revbox{border:2px solid #c77d1a;border-radius:12px;padding:12px 16px;margin:10px 0 16px;background:var(--card)}.revbox h4{margin:0 0 4px;color:#c77d1a}
+.chip{display:inline-flex;align-items:center;gap:4px;background:var(--sand);color:var(--deep);border-radius:99px;padding:2px 4px 2px 12px;margin:0 6px 6px 0;font:600 .85rem system-ui,sans-serif}.chip .link{font-size:1.1rem;padding:0 6px}
+nav a.bell{position:relative;font-size:1.05rem}nav a.bell b{position:absolute;top:-8px;right:-12px;background:#d64545;color:#fff;border-radius:99px;font:700 .68rem system-ui,sans-serif;padding:1px 5px;line-height:1.3}
+.notif{list-style:none;padding:0;margin:0 0 12px}.notif li{display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:var(--card)}
+.notif li.unread{border-left:5px solid var(--tan);font-weight:600}.notif a{text-decoration:none;color:var(--t)}.notif small{opacity:.7;white-space:nowrap}

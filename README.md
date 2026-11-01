@@ -25,8 +25,15 @@ Ditulis dengan PHP + MySQL tanpa framework, sehingga bisa langsung diunggah ke s
 - Link sesi online khusus peserta online terverifikasi
 - Notifikasi email pada setiap tahap
 
-**Reviewer**
-- Daftar naskah yang ditugaskan, **blind review** (opsional), skor 1-5, rekomendasi, komentar untuk penulis & catatan rahasia untuk panitia
+**Naskah & review (tanpa OJS, alur ala MyThesis)**
+- Setiap unggahan naskah tersimpan sebagai **versi** (v1, v2, …) — riwayat tidak terhapus
+- Review berjalan per **ronde**; admin menugaskan reviewer dengan **tenggat**
+- Reviewer memberi skor, rekomendasi, komentar, dan boleh **mengunggah file Word berisi komentar** (Comment/Track Changes)
+- Penulis melihat review (anonim) setelah keputusan panitia, lalu mengunggah **revisi + tanggapan untuk reviewer**;
+  revisi otomatis menjadi ronde baru dan diteruskan ke reviewer yang sama
+- Data naskah dikunci di formulir setelah review dimulai; naskah final (camera-ready) setelah diterima
+- Opsi naskah **Word saja** (DOC/DOCX) agar reviewer bisa berkomentar langsung di file
+- **Notifikasi di aplikasi** (ikon lonceng) untuk peserta, reviewer, dan admin, selain email
 
 **Admin**
 - **Ringkasan statistik** (kategori, negara, kehadiran, status naskah, track, tren bulanan)

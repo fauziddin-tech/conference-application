@@ -4,7 +4,7 @@
  * Dipakai oleh install/ (instalasi baru) dan inc.php (upgrade otomatis instalasi lama).
  * Setiap perubahan skema: naikkan DB_VERSION dan tambahkan langkahnya di migrate().
  */
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 function colExists(PDO $pdo, $t, $c)
 {
@@ -59,6 +59,23 @@ function migrate(PDO $pdo)
     addCol($pdo, 'mail_log', 'error', 'VARCHAR(255) NULL');
     addCol($pdo, 'mail_log', 'provider', 'VARCHAR(10) NULL');
 
+    // --- v5: alur naskah & review berversi (ala MyThesis) ---
+    $pdo->exec("CREATE TABLE IF NOT EXISTS paper_files(id INT AUTO_INCREMENT PRIMARY KEY,reg_id INT NOT NULL,round INT NOT NULL DEFAULT 1,version INT NOT NULL DEFAULT 1,kind VARCHAR(12) NOT NULL DEFAULT 'submission',file VARCHAR(100) NOT NULL,name VARCHAR(200),note TEXT,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,KEY reg(reg_id,version))$E");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS notifications(id INT AUTO_INCREMENT PRIMARY KEY,user_id INT NOT NULL,msg VARCHAR(300) NOT NULL,link VARCHAR(255),is_read TINYINT DEFAULT 0,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,KEY u(user_id,is_read))$E");
+    addCol($pdo, 'registrations', 'review_round', 'INT NOT NULL DEFAULT 1');
+    addCol($pdo, 'reviews', 'round', 'INT NOT NULL DEFAULT 1');
+    addCol($pdo, 'reviews', 'file', 'VARCHAR(100) NULL');
+    addCol($pdo, 'reviews', 'file_name', 'VARCHAR(200) NULL');
+    addCol($pdo, 'reviews', 'due_date', 'DATE NULL');
+    if ($pdo->query("SHOW INDEX FROM reviews WHERE Key_name='rr'")->fetch()) $pdo->exec("ALTER TABLE reviews DROP INDEX rr");
+    if (!$pdo->query("SHOW INDEX FROM reviews WHERE Key_name='rrr'")->fetch()) $pdo->exec("ALTER TABLE reviews ADD UNIQUE KEY rrr(reg_id,reviewer_id,round)");
+    // naskah yang sudah ada menjadi versi 1 (dan camera-ready bila ada)
+    $pf = $pdo->prepare("INSERT INTO paper_files(reg_id,round,version,kind,file,name) VALUES(?,?,?,?,?,?)");
+    foreach ($pdo->query("SELECT r.id,r.article_file,r.article_name,r.camera_file,r.camera_name FROM registrations r WHERE r.article_file<>'' AND r.article_file IS NOT NULL AND NOT EXISTS(SELECT 1 FROM paper_files p WHERE p.reg_id=r.id)")->fetchAll() as $r) {
+        $pf->execute([$r['id'], 1, 1, 'submission', $r['article_file'], $r['article_name']]);
+        if ($r['camera_file']) $pf->execute([$r['id'], 1, 1, 'camera', $r['camera_file'], $r['camera_name']]);
+    }
+
     // Pengaturan baru dengan nilai bawaan (tidak menimpa yang sudah ada)
     $def = [
         'venue_info' => 'Hotel Pangeran Pekanbaru adalah hotel keluarga dan bisnis yang menawarkan layanan terbaik untuk kenyamanan setiap tamu.',
@@ -73,6 +90,8 @@ function migrate(PDO $pdo)
         'turnstile_site' => '', 'turnstile_secret' => '',
         // v4: email
         'mail_driver' => 'mail', 'resend_key' => '', 'mail_from_name' => '',
+        // v5: naskah
+        'paper_word_only' => '0', 'review_days' => '14',
         'blocked_domains' => 'fextemp.com mailinator.com guerrillamail.com guerrillamail.info sharklasers.com grr.la 10minutemail.com 10minutemail.net temp-mail.org temp-mail.io tempmail.com tempmail.net tempmailo.com tempail.com yopmail.com yopmail.net trashmail.com trashmail.de getnada.com nada.email dispostable.com maildrop.cc throwawaymail.com emailondeck.com mohmal.com fakeinbox.com mintemail.com mytemp.email tmpmail.org tmpmail.net mail.tm 1secmail.com 1secmail.org 1secmail.net mailnesia.com spamgourmet.com mailcatch.com moakt.com emailfake.com fakemail.net burnermail.io inboxkitten.com mailpoof.com tempr.email discard.email spambox.us',
     ];
     $ins = $pdo->prepare("INSERT IGNORE INTO settings(k,v) VALUES(?,?)");

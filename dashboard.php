@@ -18,17 +18,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (in_array($a, ['revision', 'camera'], true) && $R && $R['article_title']) {
         $ok = $a === 'revision' ? $R['paper_status'] === 'revision' : $R['paper_status'] === 'accepted';
         if (!$ok) { flash('Unggahan tidak tersedia untuk status naskah saat ini.'); go('dashboard.php'); }
-        $e = ''; $file = upFile($_FILES['file'] ?? null, ['pdf', 'doc', 'docx'], $e, $a === 'revision' ? 'Revised manuscript' : 'Camera-ready');
+        $resp = post('response');
+        if ($a === 'revision' && mb_strlen($resp) < 20) { flash('Tuliskan tanggapan untuk reviewer (min. 20 karakter): apa saja yang sudah diperbaiki.'); go('dashboard.php#paper'); }
+        $e = ''; $file = upFile($_FILES['file'] ?? null, $a === 'revision' ? paperExts() : ['pdf', 'doc', 'docx'], $e, $a === 'revision' ? 'Revised manuscript' : 'Camera-ready');
         if (!$file) { flash($e); go('dashboard.php#paper'); }
+        $reg = no('R', $R['id']);
         if ($a === 'revision') {
-            rmPriv($R['article_file']);
-            $pdo->prepare("UPDATE registrations SET article_file=?,article_name=?,paper_status='submitted' WHERE id=?")->execute([$file[0], $file[1], $R['id']]);
-            // reviewer diminta menilai ulang naskah revisi
-            $pdo->prepare("UPDATE reviews SET submitted_at=NULL WHERE reg_id=?")->execute([$R['id']]);
-            flash('Naskah revisi terkirim dan akan direview ulang.');
+            // Ronde review baru: naskah revisi (versi baru) dikirim ke reviewer ronde sebelumnya
+            $old = (int)$R['review_round']; $new = $old + 1;
+            $pdo->prepare("UPDATE registrations SET review_round=? WHERE id=?")->execute([$new, $R['id']]);
+            $R['review_round'] = $new;
+            $ver = addPaperFile($R, 'revision', $file, $resp);
+            $due = date('Y-m-d', strtotime('+' . max(1, (int)setting('review_days', '14')) . ' days'));
+            $pdo->prepare("INSERT IGNORE INTO reviews(reg_id,reviewer_id,round,due_date) SELECT reg_id,reviewer_id,?,? FROM reviews WHERE reg_id=? AND round=?")->execute([$new, $due, $R['id'], $old]);
+            $revs = reviewsOf($R['id'], $new);
+            $pdo->prepare("UPDATE registrations SET paper_status=? WHERE id=?")->execute([$revs ? 'under_review' : 'submitted', $R['id']]);
+            foreach ($revs as $v) {
+                notifyUser($v['reviewer_id'], "Naskah revisi $reg (v$ver) siap direview ulang (ronde $new).", 'reviewer.php?id=' . $R['id']);
+                notify($v['email'], $v['name'], "Revised paper $reg ready for re-review", "The author has submitted a revised version (v$ver) of paper $reg \"" . $R['article_title'] . "\" with a response to the reviewers.\n\nPlease review the revision (round $new) by " . fdateEn($due) . ":\n" . absUrl('reviewer.php?id=' . $R['id']));
+            }
+            notifyAdmins("Revisi masuk $reg (v$ver, ronde $new)" . ($revs ? '' : ' — belum ada reviewer'), 'admin/?p=detail&id=' . $R['id']);
+            flash('Naskah revisi (v' . $ver . ') terkirim' . ($revs ? ' dan diteruskan ke reviewer untuk ronde ' . $new . '.' : '.'));
         } else {
-            rmPriv($R['camera_file']);
-            $pdo->prepare("UPDATE registrations SET camera_file=?,camera_name=? WHERE id=?")->execute([$file[0], $file[1], $R['id']]);
+            addPaperFile($R, 'camera', $file);
+            notifyAdmins("Naskah final (camera-ready) masuk $reg", 'admin/?p=detail&id=' . $R['id']);
             flash('Naskah final (camera-ready) terkirim. Terima kasih.');
         }
         go('dashboard.php#paper');
@@ -83,12 +96,16 @@ $st[] = ['Sertifikat', certReady($R) ? 'done' : '', certReady($R) ? 'Siap diundu
 
 <?php if ($pres): ?><h3 id="paper">Naskah</h3><div class="panel">
 <p><i><?= e($R['article_title']) ?></i><?= $R['track'] ? '<br><small>Track: ' . e($R['track']) . '</small>' : '' ?></p>
-<p>Status: <span class="badge <?= e($R['paper_status']) ?>"><?= e(lbl($PAPER, $R['paper_status'])) ?></span> &middot; File: <a href="file.php?id=<?= $R['id'] ?>&k=article"><?= e($R['article_name']) ?></a><?php if ($R['camera_file']): ?> &middot; Camera-ready: <a href="file.php?id=<?= $R['id'] ?>&k=camera"><?= e($R['camera_name']) ?></a><?php endif; ?></p>
-<?php if (in_array($R['paper_status'], ['revision', 'accepted', 'rejected'], true)):
-    $rv = $pdo->prepare("SELECT score,recommendation,to_author FROM reviews WHERE reg_id=? AND submitted_at IS NOT NULL AND to_author<>'' ORDER BY id"); $rv->execute([$R['id']]); $rv = $rv->fetchAll();
-    if ($rv): ?><h4>Komentar reviewer</h4><?php foreach ($rv as $i => $r): ?><div class="review"><b>Reviewer <?= $i + 1 ?></b><p><?= nl2br(e($r['to_author'])) ?></p></div><?php endforeach; endif; endif; ?>
-<?php if ($R['paper_status'] === 'revision'): ?><form method="post" enctype="multipart/form-data" class="inline-form"><?= csrf() ?><input type="hidden" name="a" value="revision"><label>Unggah naskah revisi (PDF/DOC/DOCX, maks. 10 MB)<input type="file" name="file" accept=".pdf,.doc,.docx" required></label><button class="btn">Kirim Revisi</button></form><?php endif; ?>
+<p>Status: <span class="badge <?= e($R['paper_status']) ?>"><?= e(lbl($PAPER, $R['paper_status'])) ?></span> &middot; Ronde review: <b><?= (int)$R['review_round'] ?></b></p>
+<?php if ($R['paper_status'] === 'revision'): ?>
+<div class="revbox"><h4>Kirim Revisi</h4><p><small>Baca komentar dan file dari reviewer di riwayat bawah. Perbaiki naskah, lalu unggah versi baru beserta tanggapan poin per poin. Revisi otomatis diteruskan ke reviewer yang sama.</small></p>
+<form method="post" enctype="multipart/form-data" class="card"><?= csrf() ?><input type="hidden" name="a" value="revision">
+<label class="full">Tanggapan untuk reviewer * <small>(apa yang sudah diperbaiki, per komentar)</small><textarea name="response" rows="6" required minlength="20" placeholder="Reviewer 1, komentar 1: ... sudah diperbaiki pada bagian ...&#10;Reviewer 2: ..."></textarea></label>
+<label>Naskah revisi * <small>(<?= paperExtLabel() ?>, maks. 10 MB; sebaiknya tandai perubahan dengan Track Changes atau warna)</small><input type="file" name="file" accept="<?= '.' . implode(',.', paperExts()) ?>" required></label>
+<button class="btn">Kirim Revisi</button></form></div><?php endif; ?>
 <?php if ($R['paper_status'] === 'accepted'): ?><form method="post" enctype="multipart/form-data" class="inline-form"><?= csrf() ?><input type="hidden" name="a" value="camera"><label>Unggah naskah final / camera-ready (PDF/DOC/DOCX)<input type="file" name="file" accept=".pdf,.doc,.docx" required></label><button class="btn"><?= $R['camera_file'] ? 'Ganti File Final' : 'Kirim File Final' ?></button></form><?php endif; ?>
+<h4>Riwayat Naskah &amp; Review</h4>
+<?php paperHistory($R, 'author'); ?>
 </div><?php endif; ?>
 <?php endif; ?>
 

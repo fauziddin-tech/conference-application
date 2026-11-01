@@ -3,6 +3,8 @@ $R = regOf($u['id']);
 $fees = fees(); $topics = items('topic');
 $locked = $R && $R['pay_status'] === 'verified';
 $closed = !$R && !regOpen();
+// Setelah naskah masuk proses review, data & berkas naskah dikunci di formulir ini (revisi lewat dashboard).
+$paperLocked = $R && $R['article_title'] && ($R['paper_status'] !== 'submitted' || reviewsOf($R['id']));
 $amin = (int)setting('abs_min', '50'); $amax = (int)setting('abs_max', '250');
 $err = [];
 function t($k) { return post($k); }
@@ -16,6 +18,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$locked && !$closed) {
         $f = ['prefix' => t('prefix'), 'full_name' => t('full_name'), 'country' => t('country'), 'orcid' => strtoupper(t('orcid')), 'phone' => t('phone'), 'category' => $cat, 'attendance' => $att,
             'track' => $pres ? t('track') : '', 'article_title' => $pres ? t('article_title') : '', 'coauthors' => $pres ? t('coauthors') : '', 'abstract' => $pres ? t('abstract') : '', 'keywords' => $pres ? t('keywords') : '',
             'pay_sender' => t('pay_sender'), 'pay_date' => t('pay_date') ?: null, 'dietary' => t('dietary'), 'agreed' => 1];
+        if ($paperLocked) {
+            foreach (['track', 'article_title', 'coauthors', 'abstract', 'keywords'] as $k) $f[$k] = $R[$k];
+            if (!$pres) $err[] = 'Naskah Anda sedang dalam proses review, sehingga kategori tidak dapat diubah menjadi non-presenter. Hubungi panitia.';
+        }
         $feeRow = null; foreach ($fees as $x) if ($x['cat'] === $cat) $feeRow = $x;
         if (!$feeRow) $err[] = 'Pilih kategori pendaftaran.';
         if (!in_array($att, ['Offline', 'Online'], true)) $err[] = 'Pilih jenis kehadiran (Offline/Online).';
@@ -39,21 +45,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$locked && !$closed) {
         $need = ['agree_info', 'agree_privacy']; if ($pres) $need = array_merge($need, ['agree_orig', 'agree_pub']);
         foreach ($need as $k) if (empty($_POST[$k])) { $err[] = 'Semua pernyataan persetujuan wajib dicentang.'; break; }
         $art = null; $pay = null; $e = '';
-        if (!$err && $pres) {
-            if (!empty($_FILES['article']['name'])) { $art = upFile($_FILES['article'], ['pdf', 'doc', 'docx'], $e, 'Article file'); if (!$art) $err[] = $e; }
+        if (!$err && $pres && !$paperLocked) {
+            if (!empty($_FILES['article']['name'])) { $art = upFile($_FILES['article'], paperExts(), $e, 'Article file'); if (!$art) $err[] = $e; }
             elseif (!($R && $R['article_file'])) $err[] = 'Article file wajib diunggah.';
         }
         if (!$err && !empty($_FILES['proof']['name'])) { $pay = upFile($_FILES['proof'], ['pdf', 'jpg', 'jpeg', 'png'], $e, 'Proof of payment'); if (!$pay) $err[] = $e; }
         if ($err && $art) { rmPriv($art[0]); $art = null; }
         if (!$err) {
             $row = $f; $row['pay_amount'] = feeText($feeRow);
-            if ($art) { rmPriv($R['article_file'] ?? ''); $row['article_file'] = $art[0]; $row['article_name'] = $art[1]; }
-            if (!$pres && $R && $R['article_file']) { rmPriv($R['article_file']); rmPriv($R['camera_file']); $row['article_file'] = ''; $row['article_name'] = ''; $row['camera_file'] = ''; $row['camera_name'] = ''; }
+            if (!$pres && $R && $R['article_file']) { deletePaper($R['id']); $row['article_file'] = ''; $row['article_name'] = ''; $row['camera_file'] = ''; $row['camera_name'] = ''; }
             if ($pay) { rmPriv($R['pay_file'] ?? ''); $row['pay_file'] = $pay[0]; $row['pay_name'] = $pay[1]; }
             if (!$hasProof) { $row['pay_sender'] = ''; $row['pay_date'] = null; }
             $row['pay_status'] = $pay ? 'pending' : ($hasProof ? ($R['pay_status'] === 'unpaid' || $R['pay_status'] === 'rejected' ? 'pending' : $R['pay_status']) : 'unpaid');
             if ($R) {
-                if ($R['paper_status'] === 'revision' && $art) $row['paper_status'] = 'submitted';
                 $sets = implode(',', array_map(function ($k) { return "$k=?"; }, array_keys($row)));
                 $pdo->prepare("UPDATE registrations SET $sets WHERE id=?")->execute(array_merge(array_values($row), [$R['id']]));
                 $rid = $R['id'];
@@ -63,6 +67,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$locked && !$closed) {
                 $pdo->prepare("INSERT INTO registrations($cols) VALUES($ph)")->execute(array_values($row));
                 $rid = $pdo->lastInsertId();
             }
+            if ($art) { $q = $pdo->prepare("SELECT * FROM registrations WHERE id=?"); $q->execute([$rid]); $ver = addPaperFile($q->fetch(), 'submission', $art);
+                notifyAdmins(($R ? 'Naskah diperbarui (v' . $ver . ')' : 'Naskah baru') . ': ' . no('R', $rid) . ' "' . mb_strimwidth($f['article_title'], 0, 80, '…') . '"', 'admin/?p=detail&id=' . $rid); }
+            if (!$R) notifyAdmins('Pendaftaran baru ' . no('R', $rid) . ': ' . $f['full_name'] . ' (' . $cat . ')', 'admin/?p=detail&id=' . $rid);
+            elseif ($pay) notifyAdmins('Bukti bayar diunggah ' . no('R', $rid) . ': ' . $f['full_name'], 'admin/?p=detail&id=' . $rid);
             $pdo->prepare("UPDATE users SET category=?,institution=?,phone=? WHERE id=?")->execute([$cat, $inst, $f['phone'], $u['id']]);
             if (!$R || $pay) {
                 $txt = (!$R ? "Your registration has been received.\n\nRegistration number: " . no('R', $rid) . "\nCategory: $cat ($att)\nFee: " . $row['pay_amount'] . ($pres ? "\nPaper: " . $f['article_title'] : '') . "\n\n" : '')
@@ -97,12 +105,13 @@ head('Pendaftaran'); ?>
 <label>Registration category *<select name="category" id="cat" required><option value="">-- select --</option><?php foreach ($fees as $f): ?><option value="<?= e($f['cat']) ?>" data-fee="<?= e(feeText($f)) ?>" <?= $cur === $f['cat'] ? 'selected' : '' ?>><?= e($f['cat'] . ' (' . feeNow($f)[0] . ')') ?></option><?php endforeach; ?></select></label>
 <div><b>Attendance participation *</b><label class="chk"><input type="radio" name="attendance" value="Offline" required <?= v('attendance') === 'Offline' ? 'checked' : '' ?>> Offline (on-site)</label><label class="chk"><input type="radio" name="attendance" value="Online" <?= v('attendance') === 'Online' ? 'checked' : '' ?>> Online (virtual)</label></div>
 <div id="paper" class="full sub"><h3 class="full">3. Paper Submission (presenters)</h3>
-<?php if ($topics): ?><label class="full">Topic / track *<select name="track" data-need="1"><option value="">-- select --</option><?php foreach ($topics as $tp): ?><option <?= v('track') === $tp['title'] ? 'selected' : '' ?>><?= e($tp['title']) ?></option><?php endforeach; ?></select></label><?php endif; ?>
-<label class="full">Article title *<input name="article_title" data-need="1" value="<?= e(v('article_title')) ?>"></label>
-<label class="full">Co-authors (name &amp; affiliation, one per line; optional)<textarea name="coauthors" rows="3"><?= e(v('coauthors')) ?></textarea></label>
-<label class="full">Abstract * <small>(<?= $amin ?>-<?= $amax ?> words, no references) <span id="wc"></span></small><textarea name="abstract" id="abs" rows="8" data-need="1"><?= e(v('abstract')) ?></textarea></label>
-<label>Keywords * <small>(3-5, comma separated)</small><input name="keywords" data-need="1" value="<?= e(v('keywords')) ?>"></label>
-<label>Article file * <small>(PDF/DOC/DOCX, max 10 MB<?= setting('blind_review', '1') === '1' ? '; remove author names for blind review' : '' ?>)</small><input type="file" name="article" accept=".pdf,.doc,.docx" <?= ($R && $R['article_file']) ? '' : 'data-need="1"' ?>><?php if ($R && $R['article_file']): ?><small>File saat ini: <a href="file.php?id=<?= $R['id'] ?>&k=article"><?= e($R['article_name']) ?></a> (kosongkan jika tidak diganti)</small><?php endif; ?></label>
+<?php if ($paperLocked): ?><p class="msg full">Naskah Anda sedang dalam proses review (status: <b><?= e(lbl($PAPER, $R['paper_status'])) ?></b>), sehingga data naskah dikunci di sini. Revisi dan naskah final diunggah dari <a href="dashboard.php#paper">dashboard</a>.</p><?php endif; ?>
+<?php if ($topics): ?><label class="full">Topic / track *<select name="track" data-need="1"<?= $paperLocked ? ' disabled' : '' ?>><option value="">-- select --</option><?php foreach ($topics as $tp): ?><option <?= v('track') === $tp['title'] ? 'selected' : '' ?>><?= e($tp['title']) ?></option><?php endforeach; ?></select></label><?php endif; ?>
+<label class="full">Article title *<input name="article_title" data-need="1"<?= $paperLocked ? ' readonly' : '' ?> value="<?= e(v('article_title')) ?>"></label>
+<label class="full">Co-authors (name &amp; affiliation, one per line; optional)<textarea name="coauthors" rows="3"<?= $paperLocked ? ' readonly' : '' ?>><?= e(v('coauthors')) ?></textarea></label>
+<label class="full">Abstract * <small>(<?= $amin ?>-<?= $amax ?> words, no references) <span id="wc"></span></small><textarea name="abstract" id="abs" rows="8" data-need="1"<?= $paperLocked ? ' readonly' : '' ?>><?= e(v('abstract')) ?></textarea></label>
+<label>Keywords * <small>(3-5, comma separated)</small><input name="keywords" data-need="1"<?= $paperLocked ? ' readonly' : '' ?> value="<?= e(v('keywords')) ?>"></label>
+<?php if (!$paperLocked): ?><label>Article file * <small>(<?= paperExtLabel() ?>, max 10 MB<?= setting('blind_review', '1') === '1' ? '; remove author names for blind review' : '' ?>)</small><input type="file" name="article" accept="<?= '.' . implode(',.', paperExts()) ?>" <?= ($R && $R['article_file']) ? '' : 'data-need="1"' ?>><?php if ($R && $R['article_file']): ?><small>File saat ini: <a href="file.php?id=<?= $R['id'] ?>&k=article"><?= e($R['article_name']) ?></a> (unggah file baru untuk membuat versi baru)</small><?php endif; ?></label><?php endif; ?>
 <label class="chk full"><input type="checkbox" class="pres-only" name="agree_orig" <?= ($_POST ? !empty($_POST['agree_orig']) : ($R && $R['article_title'])) ? 'checked' : '' ?>> I declare that this paper is original, has not been published, and is not under review elsewhere.</label>
 <label class="chk full"><input type="checkbox" class="pres-only" name="agree_pub" <?= ($_POST ? !empty($_POST['agree_pub']) : ($R && $R['article_title'])) ? 'checked' : '' ?>> I agree that the accepted paper may be published in the conference proceedings / partner journals.</label></div>
 <h3>4. Payment</h3>
