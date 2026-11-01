@@ -6,6 +6,7 @@ if (!file_exists(__DIR__ . '/config.php')) { header('Location: install/'); exit;
 require __DIR__ . '/config.php';
 require_once __DIR__ . '/lib/schema.php';
 require_once __DIR__ . '/lib/paper.php';
+require_once __DIR__ . '/lib/backup.php';
 
 $HTTPS = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ($_SERVER['SERVER_PORT'] ?? '') == '443' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
 if (session_status() === PHP_SESSION_NONE) {
@@ -29,6 +30,8 @@ function rows($k) { $o = []; foreach (preg_split('/\R/', setting($k)) as $l) { $
 settings_load();
 if ((int)setting('db_version', '1') < DB_VERSION) { migrate($pdo); settings_load(); }
 @date_default_timezone_set(setting('timezone', 'Asia/Jakarta'));
+// Samakan zona waktu sesi MySQL dengan PHP agar NOW()/TIMESTAMP konsisten (mis. WIB, bukan UTC server).
+try { $pdo->exec("SET time_zone='" . date('P') . "'"); } catch (Exception $x) {}
 
 /* ---------- utilitas umum ---------- */
 function e($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }

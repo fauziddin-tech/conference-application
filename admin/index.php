@@ -41,6 +41,16 @@ if ($p === 'export') csvOut('akun-' . date('Ymd') . '.csv', ['ID', 'Peran', 'Kat
 if ($p === 'exportrev') csvOut('review-' . date('Ymd') . '.csv', ['Paper', 'Judul', 'Ronde', 'Reviewer', 'Skor', 'Rekomendasi', 'Komentar penulis', 'Catatan panitia', 'Dikirim'],
     $pdo->query("SELECT CONCAT('R',LPAD(r.id,4,'0')),r.article_title,v.round,u.name,v.score,v.recommendation,v.to_author,v.to_committee,v.submitted_at FROM reviews v JOIN registrations r ON r.id=v.reg_id JOIN users u ON u.id=v.reviewer_id ORDER BY r.id,v.round")->fetchAll());
 
+/* ---------- backup: unduh & otomatis ---------- */
+if ($p === 'backupdl') {
+    $f = backupPath((string)($_GET['f'] ?? ''));
+    if (!$f) { http_response_code(404); die('File backup tidak ditemukan.'); }
+    header('Content-Type: application/gzip'); header('Content-Length: ' . filesize($f));
+    header('Content-Disposition: attachment; filename="' . basename($f) . '"'); header('X-Content-Type-Options: nosniff');
+    readfile($f); exit;
+}
+$autoBackup = $_SERVER['REQUEST_METHOD'] === 'GET' ? backupAutoIfDue($pdo) : null;
+
 /* ---------- aksi (POST) ---------- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $a = post('a'); $id = (int)($_POST['id'] ?? 0); $msg = null; $back = null;
@@ -185,6 +195,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $msg .= " Email terkirim ke $n dari $tot peserta.";
         }
         break;
+    case 'backuprun':
+        $back = '?p=sistem#backup';
+        try { $s = backupRun($pdo, 'manual', (int)setting('backup_keep', '14')); $msg = 'Backup berhasil: ' . $s['file'] . ' (' . number_format($s['size'] / 1024, 1, ',', '.') . ' KB, ' . $s['tables'] . ' tabel, ' . $s['rows'] . ' baris).'; }
+        catch (Throwable $x) { $msg = 'Backup GAGAL: ' . $x->getMessage(); }
+        break;
+    case 'backupdel':
+        $back = '?p=sistem#backup'; $f = backupPath(post('f'));
+        $msg = $f && @unlink($f) ? 'File backup dihapus.' : 'File backup tidak ditemukan.'; break;
+    case 'backupset':
+        $back = '?p=sistem#backup';
+        setSetting('backup_auto', empty($_POST['backup_auto']) ? '0' : '1');
+        setSetting('backup_keep', (string)max(1, min(365, (int)($_POST['backup_keep'] ?? 14))));
+        $msg = 'Pengaturan backup disimpan.'; break;
     case 'mailtest':
         $back = '?p=setting#uji-email'; $to = strtolower(post('to')) ?: $u['email'];
         $ok = sendMail($to, '[' . brand() . '] Test email', "This is a test email from " . setting('name') . ".\n\nSent: " . date('Y-m-d H:i:s') . " (" . setting('timezone', 'Asia/Jakarta') . ")\nProvider: " . (resendOn() ? 'Resend API' : 'PHP mail()') . "\nFrom: " . mailFrom()[0] . "\n\nIf you received this, email notifications are working.\n" . absUrl(), $err);
@@ -214,9 +237,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     flash($msg ?? 'Perubahan disimpan.'); go($back ?? '?p=' . $p . (isset($_GET['k']) ? '&k=' . urlencode($_GET['k']) : ''));
 }
 
-$TABS = ['ringkasan' => 'Ringkasan', 'peserta' => 'Peserta', 'naskah' => 'Naskah & Review', 'pengguna' => 'Akun', 'pembicara' => 'Pembicara', 'konten' => 'Konten', 'agenda' => 'Agenda', 'jurnal' => 'Jurnal', 'email' => 'Email', 'setting' => 'Pengaturan'];
+$TABS = ['ringkasan' => 'Ringkasan', 'peserta' => 'Peserta', 'naskah' => 'Naskah & Review', 'pengguna' => 'Akun', 'pembicara' => 'Pembicara', 'konten' => 'Konten', 'agenda' => 'Agenda', 'jurnal' => 'Jurnal', 'email' => 'Email', 'setting' => 'Pengaturan', 'sistem' => 'Sistem'];
 head('Admin'); ?>
 <h2>Panel Admin</h2><div class="tabs"><?php foreach ($TABS as $k => $l): ?><a href="?p=<?= $k ?>" class="<?= $p === $k || ($k === 'peserta' && $p === 'detail') || ($k === 'pengguna' && $p === 'edit') ? 'on' : '' ?>"><?= e($l) ?></a><?php endforeach; ?><a href="../checkin.php">Check-in</a></div>
+<?php if ($autoBackup && empty($autoBackup['ok'])): ?><p class="msg err">Backup otomatis gagal: <?= e($autoBackup['msg'] ?? '') ?> &middot; <a href="?p=sistem#backup">lihat Sistem</a></p><?php elseif ($autoBackup): ?><p class="msg">Backup otomatis harian dibuat: <?= e($autoBackup['file']) ?></p><?php endif; ?>
 <?php
 $view = __DIR__ . '/views/' . $p . '.php';
 if (is_file($view)) include $view; else echo '<p>Halaman tidak ditemukan.</p>';

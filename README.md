@@ -77,6 +77,20 @@ Batas unggah file 10 MB per file — sesuaikan `upload_max_filesize`/`post_max_s
 Email massal dikirim lewat endpoint batch Resend (maks. 100 email per permintaan). Perhatikan kuota paket Resend Anda.
 Hosting harus mengaktifkan ekstensi PHP **cURL**.
 
+## Pemeriksaan Sistem & Backup
+
+Panel admin → **Sistem** menampilkan pemeriksaan (hanya membaca): versi PHP & ekstensi, batas unggah, jam server,
+skema database, HTTPS, folder `install/`, proteksi folder, izin tulis, captcha, akun spam, status email, status backup,
+serta kelengkapan pengaturan konferensi — lengkap dengan tautan "perbaiki".
+
+**Backup database** (format `.sql.gz`, struktur + data semua tabel) disimpan di luar `public_html`
+(`/home/USER/backup-konferensi`, bisa diubah dengan `define('BACKUP_DIR', '/path');` di `config.php`):
+- Tombol **Buat Backup Sekarang**, unduh, dan hapus di halaman Sistem.
+- **Cron Jobs cPanel** (disarankan, sekali sehari): `php /home/USER/public_html/tools/backup-database.php`
+- **Backup otomatis harian** saat admin membuka panel bila backup terakhir lebih dari 24 jam (cadangan jika Cron belum diatur).
+- Backup lebih lama dari N hari (bawaan 14) dihapus otomatis. Pemulihan: phpMyAdmin → Import file `.sql.gz`.
+- File unggahan (`uploads/`) sertakan dalam fitur Backup cPanel secara berkala.
+
 ## Upgrade dari versi lama
 
 Cukup timpa file aplikasi (jangan hapus `config.php` dan folder `uploads/`). Saat halaman pertama dibuka,
@@ -107,6 +121,10 @@ file.php             unduhan file privat
 admin/index.php      panel admin (aksi) + admin/views/*.php (tampilan)
 inc.php              bootstrap, helper, layout
 lib/schema.php       skema database & migrasi otomatis
+lib/paper.php        versi naskah, ronde review, notifikasi
+lib/backup.php       backup database
+tools/backup-database.php  skrip Cron backup (CLI)
+notifikasi.php       notifikasi di aplikasi
 assets/qrcode.min.js QRCode.js (MIT)
 uploads/             foto pembicara/logo (publik) dan uploads/private (naskah & bukti bayar)
 ```
