@@ -199,6 +199,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $msg .= " Email terkirim ke $n dari $tot peserta.";
         }
         break;
+    case 'docxold':
+        $back = '?p=sistem#docx'; $n = 0; $saved = 0; $fail = 0;
+        @set_time_limit(600);
+        foreach (glob(__DIR__ . '/../uploads/private/*.docx') ?: [] as $f) {
+            $r = stripDocx($f);
+            if ($r && $r->isStripped()) { $n++; $saved += $r->sizeBefore - $r->sizeAfter; } elseif ($r && $r->status === 'failed') $fail++;
+        }
+        $msg = "File .docx dibersihkan: $n" . ($n ? ' (hemat ' . number_format($saved / 1048576, 2, ',', '.') . ' MB)' : '') . '.' . ($fail ? " $fail file dilewati karena tidak lolos validasi (file asli tetap utuh)." : ''); break;
     case 'imgopt':
         $back = '?p=sistem#gambar'; $up = __DIR__ . '/../uploads/'; $before = 0; $after = 0; $n = 0;
         $opt = function ($fn, $kind, $keep = false) use ($up, &$before, &$after, &$n) {
@@ -255,7 +263,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (setting('site_url') !== '') setSetting('site_url', rtrim(setting('site_url'), '/') . '/');
         if (setting('logo_url') !== '' && !isurl(setting('logo_url')) && !is_file(__DIR__ . '/../uploads/' . basename(setting('logo_url')))) { setSetting('logo_url', ''); $bad[] = 'URL logo'; }
         if ($bad) $msg = 'Pengaturan disimpan, tetapi isian berikut dikosongkan karena bukan alamat http(s):// yang valid: ' . implode(', ', $bad) . '.';
-        foreach (['reg_open', 'cert_open', 'cert_checkin', 'blind_review', 'paper_word_only', 'cert_reviewer', 'poster_popup'] as $k) setSetting($k, empty($_POST[$k]) ? '0' : '1');
+        foreach (['reg_open', 'cert_open', 'cert_checkin', 'blind_review', 'paper_word_only', 'cert_reviewer', 'poster_popup', 'docx_strip'] as $k) setSetting($k, empty($_POST[$k]) ? '0' : '1');
         if (isset($_POST['review_days'])) setSetting('review_days', (string)max(1, min(90, (int)$_POST['review_days'])));
         if (isset($_POST['mail_driver'])) setSetting('mail_driver', post('mail_driver') === 'resend' ? 'resend' : 'mail');
         if (!empty($_POST['resend_key_clear'])) setSetting('resend_key', '');

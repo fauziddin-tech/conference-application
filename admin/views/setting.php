@@ -29,6 +29,7 @@ $cb = function ($k, $l) { return '<label class="chk full"><input type="checkbox"
 <h3>Call for Papers &amp; Naskah</h3>
 <?= $ta('cfp_info', 'Informasi Call for Papers (topik dikelola di Konten &rarr; Topik)', 4) ?>
 <?= $in('submission_url', 'Link Make Submission eksternal (OJS/EasyChair; kosongkan jika tidak dipakai)', 'url') ?>
+<?= $cb('docx_strip', 'Saat .docx diunggah (naskah, revisi, camera-ready, file komentar reviewer): <b>buang font tertanam</b> &amp; perkecil gambar PNG yang terlalu besar (500 dpi), agar file jauh lebih kecil. Isi, tabel, komentar &amp; track changes tidak berubah.') ?>
 <?= $in('abs_min', 'Abstrak minimal (kata)', 'number') ?><?= $in('abs_max', 'Abstrak maksimal (kata)', 'number') ?>
 <h3>Biaya &amp; Pembayaran</h3>
 <?= $ta('fees', 'Biaya: <code>Kategori|IDR|USD|Early IDR|Early USD</code> (satu per baris; kolom early opsional). Kategori berisi kata "Presenter" mewajibkan naskah, "Online"/"Offline" mengunci jenis kehadiran.', 5) ?>

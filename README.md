@@ -33,6 +33,7 @@ Ditulis dengan PHP + MySQL tanpa framework, sehingga bisa langsung diunggah ke s
   revisi otomatis menjadi ronde baru dan diteruskan ke reviewer yang sama
 - Data naskah dikunci di formulir setelah review dimulai; naskah final (camera-ready) setelah diterima
 - Opsi naskah **Word saja** (DOC/DOCX) agar reviewer bisa berkomentar langsung di file
+- **Pembersih .docx otomatis** saat unggah (dari plugin `docx-font-stripper-ojs33`): font tertanam dibuang dan PNG besar diperkecil ke 500 dpi; hasil divalidasi, file asli dipertahankan bila gagal. Bisa dinonaktifkan di Pengaturan; tombol untuk file lama di Admin → Sistem
 - **Sertifikat reviewer** (Certificate of Appreciation, berisi jumlah naskah yang direview, terverifikasi QR)
 - **Sertifikat pembicara, panitia & moderator** dibuat admin dari tab Pembicara, Konten → Komite, dan Konten → Moderator (per orang atau cetak semua dalam satu PDF), terverifikasi QR
 - **Pratinjau dokumen dalam popup** (sertifikat, LoA, invoice, dll.); admin dapat mempratinjau sertifikat peserta/presenter/reviewer dengan data contoh dari Pengaturan
@@ -147,6 +148,8 @@ inc.php              bootstrap, helper, layout
 lib/schema.php       skema database & migrasi otomatis
 lib/paper.php        versi naskah, ronde review, notifikasi
 lib/backup.php       backup database
+lib/image.php        optimasi gambar (WebP, rotasi EXIF)
+lib/DocxFontStripper.php  pembersih font tertanam .docx (GPL-3.0, dari docx-font-stripper-ojs33)
 tools/backup-database.php  skrip Cron backup (CLI)
 notifikasi.php       notifikasi di aplikasi
 assets/qrcode.min.js QRCode.js (MIT)

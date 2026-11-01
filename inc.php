@@ -345,7 +345,27 @@ function upFile($f, $exts, &$err, $label, $public = false)
     if (!is_dir($d)) { @mkdir($d, 0755, true); if (!$public) @file_put_contents($d . '.htaccess', "Require all denied\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n"); }
     $fn = ($public ? 'dl_' : '') . bin2hex(random_bytes(10)) . '.' . $ext;
     if (!move_uploaded_file($f['tmp_name'], $d . $fn)) { $err = t('%s: could not be saved (check the uploads folder permissions).', $label); return null; }
+    if ($ext === 'docx' && !$public) stripDocx($d . $fn); // buang font tertanam & perkecil PNG besar
     return [$fn, substr(basename($f['name']), 0, 190)];
+}
+/**
+ * Bersihkan .docx: buang font tertanam dan perkecil PNG yang jauh di atas ukuran tampil (500 dpi),
+ * memakai DocxFontStripper (dari plugin OJS docx-font-stripper-ojs33). File asli dipertahankan bila
+ * hasilnya gagal divalidasi; unggahan tidak pernah gagal karena langkah ini.
+ */
+function stripDocx($path)
+{
+    if (setting('docx_strip', '1') !== '1' || !class_exists('ZipArchive') || !class_exists('DOMDocument')) return null;
+    try {
+        require_once __DIR__ . '/lib/DocxFontStripper.php';
+        $r = (new DocxFontStripper(['downscaleImages' => true, 'imageTargetDpi' => 500]))->stripInPlace($path);
+        if ($r->status !== DocxFontStripResult::UNCHANGED) error_log('[DocxFontStripper] ' . basename($path) . ': ' . $r->summary());
+        if ($r->isStripped()) {
+            setSetting('docx_strip_count', (int)setting('docx_strip_count', '0') + 1);
+            setSetting('docx_strip_saved', (int)setting('docx_strip_saved', '0') + max(0, $r->sizeBefore - $r->sizeAfter));
+        }
+        return $r;
+    } catch (Throwable $x) { error_log('[DocxFontStripper] ' . basename($path) . ': ' . $x->getMessage()); return null; }
 }
 function rmPriv($fn) { if ($fn) @unlink(__DIR__ . '/uploads/private/' . basename($fn)); }
 /** Gambar publik (foto pembicara, logo sponsor). */

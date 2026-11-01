@@ -113,4 +113,10 @@ $icon = ['ok' => '&#10004;', 'warn' => '!', 'fail' => '&#10006;']; ?>
 <div class="card"><p>Total gambar publik: <b><?= count($imgs) ?></b> file, <b><?= number_format($isz / 1048576, 2, ',', '.') ?> MB</b><?= $bigs ? ' &middot; <span class="tag spam">' . $bigs . ' gambar berukuran besar</span>' : '' ?>.
 Foto pembicara, logo, dan poster yang diunggah kini otomatis diperkecil &amp; dikompres (WebP). Untuk gambar yang diunggah sebelum fitur ini, klik tombol di bawah (aman dijalankan berulang kali; poster asli tetap disimpan untuk diunduh).</p>
 <form method="post" data-confirm="Optimalkan semua gambar lama sekarang?"><?= csrf() ?><input type="hidden" name="a" value="imgopt"><button class="btn">Optimalkan Gambar</button></form></div>
+<?php $dx = glob(__DIR__ . '/../../uploads/private/*.docx') ?: []; $dxs = 0; foreach ($dx as $f) $dxs += filesize($f); ?>
+<h3 id="docx">Pembersih File Word (.docx)</h3>
+<div class="card"><p>Status: <b><?= setting('docx_strip', '1') === '1' ? 'aktif' : 'nonaktif' ?></b> (atur di <a href="?p=setting">Pengaturan</a>) &middot; ekstensi zip/dom: <b><?= class_exists('ZipArchive') && class_exists('DOMDocument') ? 'tersedia' : 'TIDAK tersedia' ?></b><br>
+Sudah dibersihkan otomatis: <b><?= (int)setting('docx_strip_count', '0') ?></b> file, hemat <b><?= number_format((int)setting('docx_strip_saved', '0') / 1048576, 2, ',', '.') ?> MB</b> &middot; File .docx tersimpan saat ini: <?= count($dx) ?> file (<?= number_format($dxs / 1048576, 2, ',', '.') ?> MB).</p>
+<p><small>Font tertanam dibuang dan gambar PNG yang resolusinya jauh di atas ukuran tampil diperkecil ke 500 dpi. Setiap hasil divalidasi; bila gagal, file asli dipertahankan. Komputer pembaca yang tidak memiliki font aslinya akan memakai font pengganti (tata letak bisa sedikit bergeser).</small></p>
+<form method="post" data-confirm="Bersihkan semua file .docx yang sudah diunggah sebelumnya?"><?= csrf() ?><input type="hidden" name="a" value="docxold"><button class="btn">Bersihkan File .docx Lama</button></form></div>
 
