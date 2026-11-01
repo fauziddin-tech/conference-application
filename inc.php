@@ -347,10 +347,10 @@ function upFile($f, $exts, &$err, $label, $public = false)
 }
 function rmPriv($fn) { if ($fn) @unlink(__DIR__ . '/uploads/private/' . basename($fn)); }
 /** Gambar publik (foto pembicara, logo sponsor). */
-function upImage($f, &$err, $prefix = 'img')
+function upImage($f, &$err, $prefix = 'img', $maxMb = 2)
 {
     $err = '';
-    if (!$f || $f['error'] !== 0 || $f['size'] > 2097152) { $err = 'Gagal: gunakan JPG/PNG/WEBP maksimal 2 MB.'; return ''; }
+    if (!$f || $f['error'] !== 0 || $f['size'] > $maxMb * 1048576) { $err = 'Gagal: gunakan JPG/PNG/WEBP maksimal ' . $maxMb . ' MB.'; return ''; }
     $im = @getimagesize($f['tmp_name']);
     $ext = $im ? ([IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_WEBP => 'webp'][$im[2]] ?? null) : null;
     if (!$ext) { $err = 'Gagal: file bukan gambar JPG/PNG/WEBP.'; return ''; }
@@ -387,7 +387,8 @@ function head($t, $extra = '')
 <meta name="description" content="<?= e(mb_substr($desc, 0, 300)) ?>">
 <meta property="og:type" content="website"><meta property="og:title" content="<?= e(setting('name')) ?>"><meta property="og:description" content="<?= e(mb_substr($desc, 0, 300)) ?>"><meta property="og:url" content="<?= e(absUrl()) ?>"><meta property="og:locale" content="<?= $L === 'id' ? 'id_ID' : 'en_US' ?>">
 <?php foreach (array_keys(LANGS) as $l): ?><link rel="alternate" hreflang="<?= $l ?>" href="<?= e(absUrl(ltrim(substr(langUrl($l), strlen(BASE)), '/'))) ?>"><?php endforeach; ?>
-<?php if (setting('logo_url')): ?><meta property="og:image" content="<?= e(imgSrc(setting('logo_url'))) ?>"><link rel="icon" href="<?= e(imgSrc(setting('logo_url'))) ?>"><?php endif; ?>
+<?php $ogi = setting('poster') ?: setting('logo_url'); if ($ogi): $ogu = isurl($ogi) ? $ogi : absUrl('uploads/' . rawurlencode(basename($ogi))); ?><meta property="og:image" content="<?= e($ogu) ?>"><meta name="twitter:card" content="<?= setting('poster') ? 'summary_large_image' : 'summary' ?>"><meta name="twitter:image" content="<?= e($ogu) ?>"><?php endif; ?>
+<?php if (setting('logo_url')): ?><link rel="icon" href="<?= e(imgSrc(setting('logo_url'))) ?>"><?php endif; ?>
 <meta name="theme-color" content="#1d3a3a">
 <link rel="stylesheet" href="<?= $H ?>style.css?v=<?= @filemtime(__DIR__ . "/style.css") ?>"><?= $extra ?></head><body id="top"<?= defined('ADMIN') ? ' class="adm"' : '' ?>>
 <a class="skip" href="#main"><?= te('Skip to content') ?></a>

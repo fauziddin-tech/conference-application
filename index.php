@@ -24,6 +24,15 @@ head(t('Home'), $ld); ?>
 <?php if ($startIso && strtotime($start) > time()): ?><div class="countdown" data-countdown="<?= e($startIso) ?>" aria-label="<?= te('Event countdown') ?>"><span><b>-</b><?= te('days') ?></span><span><b>-</b><?= te('hours') ?></span><span><b>-</b><?= te('min') ?></span><span><b>-</b><?= te('sec') ?></span></div><?php endif; ?>
 <div class="actions"><a class="btn" href="<?= $reg ?>"><?= $u ? te('Open Dashboard') : te('Register Now') ?></a><a class="btn ghost" href="#cfp"><?= te('Call for Papers') ?></a><?php if ($start): ?><a class="btn ghost" href="calendar.php">+ <?= te('Add to Calendar') ?></a><?php endif; ?></div></section>
 
+<?php if ($poster = setting('poster')): $pu = imgSrc($poster); ?>
+<section id="poster" class="s fade poster"><a href="<?= e($pu) ?>" class="pimg" data-poster aria-label="<?= te('View full size') ?>"><img src="<?= e($pu) ?>" alt="<?= e(t('Event Poster') . ' — ' . setting('name')) ?>" loading="lazy"></a>
+<p class="center pbtn"><a class="btn ghost2" href="<?= e($pu) ?>" data-poster><?= te('View full size') ?></a> <a class="btn ghost2" href="<?= e($pu) ?>" download="poster-<?= e(strtolower(preg_replace('/[^A-Za-z0-9]+/', '-', brand()))) ?>.<?= e(pathinfo($poster, PATHINFO_EXTENSION)) ?>">&#8681; <?= te('Download Poster') ?></a></p></section>
+<div id="posm" class="modal posm" hidden><div class="pbox" role="dialog" aria-modal="true" aria-label="<?= te('Event Poster') ?>"><button type="button" class="mx" aria-label="<?= te('Close') ?>">&times;</button><img src="<?= e($pu) ?>" alt=""><?php if (regOpen() && !$u): ?><p class="center"><a class="btn" href="register.php"><?= te('Register Now') ?></a></p><?php endif; ?></div></div>
+<script>(function(){var m=document.getElementById('posm');function op(e){if(e)e.preventDefault();m.hidden=false;document.body.style.overflow='hidden'}function cl(){m.hidden=true;document.body.style.overflow=''}
+document.querySelectorAll('[data-poster]').forEach(function(a){a.addEventListener('click',op)});m.querySelector('.mx').onclick=cl;m.addEventListener('click',function(e){if(e.target===m)cl()});document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!m.hidden)cl()});
+m.querySelectorAll('a[href$="register.php"]').forEach(function(a){a.addEventListener('click',cl)});
+<?php if (setting('poster_popup') === '1'): ?>try{var k='posterSeen',v=localStorage.getItem(k);if(!v||Date.now()-(+v)>86400000){localStorage.setItem(k,Date.now());setTimeout(op,600)}}catch(x){}<?php endif; ?>})();</script>
+<?php endif; ?>
 <?php if ($news): ?><section class="s fade news"><h2><?= te('Announcements') ?></h2><div class="grid ngrid"><?php foreach (array_slice($news, 0, 3) as $n): ?>
 <article class="card"><small><?= e(fdateL($n['created_at'])) ?></small><h3><?= e(tx($n['title'])) ?></h3><p><?= nl2br(e(tx($n['body']))) ?></p><?php if (isurl($n['url'])): ?><p><a href="<?= e($n['url']) ?>" target="_blank" rel="noopener"><?= te('Read more') ?> &rarr;</a></p><?php endif; ?></article><?php endforeach; ?></div></section><?php endif; ?>
 

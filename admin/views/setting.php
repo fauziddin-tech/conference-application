@@ -13,6 +13,9 @@ $cb = function ($k, $l) { return '<label class="chk full"><input type="checkbox"
 <?= $in('review_days', 'Tenggat review bawaan (hari)', 'number') ?>
 <h3>Identitas Konferensi</h3>
 <?= $in('name', 'Nama Konferensi') ?><?= $in('tagline', 'Tagline / Tema') ?><?= $in('organizer', 'Penyelenggara') ?>
+<label>Poster acara <small>(JPG/PNG/WEBP maks. 8 MB; tampil di beranda &amp; sebagai gambar pratinjau saat tautan dibagikan di WhatsApp/media sosial)</small><input type="file" name="poster" accept="image/jpeg,image/png,image/webp"><?php if (setting('poster')): ?><img src="<?= e(imgSrc(setting('poster'))) ?>" alt="" style="max-width:260px;border-radius:8px;margin-top:6px;display:block"><?php endif; ?></label>
+<?php if (setting('poster')): ?><label class="chk full"><input type="checkbox" name="poster_rm" value="1"> Hapus poster</label><?php endif; ?>
+<?= $cb('poster_popup', 'Tampilkan poster sebagai <b>popup</b> saat pengunjung membuka beranda (maks. sekali per hari per pengunjung)') ?>
 <label>Logo <small>(JPG/PNG/WEBP; dipakai di navigasi, dokumen &amp; sertifikat)</small><input type="file" name="logo" accept="image/jpeg,image/png,image/webp"><?php if (setting('logo_url')): ?><img class="thumb" src="<?= e(imgSrc(setting('logo_url'))) ?>" alt=""><?php endif; ?></label>
 <?= $in('logo_url', 'atau URL logo', 'text', 'https://...') ?>
 <?= $in('site_url', 'Alamat resmi situs <small>(dipakai di email, QR &amp; sertifikat; terisi otomatis)</small>', 'url', 'https://picoe.org/') ?><?= $in('website', 'Website (teks tampilan)') ?><?= $in('email', 'Email resmi panitia', 'email') ?>
