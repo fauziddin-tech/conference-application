@@ -1,7 +1,7 @@
 <?php if (!defined('ADMIN')) exit; ?>
 <h3>Kirim Email Massal</h3>
 <p>Gunakan untuk pengingat pembayaran, info teknis acara, link zoom, dsb. Placeholder: <code>{name}</code>, <code>{regno}</code>, <code>{email}</code>. Catatan: hosting bersama biasanya membatasi jumlah email per jam (mis. 100-500); kirim bertahap bila penerima banyak.</p>
-<form method="post" class="card" onsubmit="return confirm('Kirim email ke semua penerima terpilih?')"><?= csrf() ?><input type="hidden" name="a" value="bulk">
+<form method="post" class="card" data-confirm="Kirim email ke semua penerima terpilih?"><?= csrf() ?><input type="hidden" name="a" value="bulk">
 <label>Penerima<select name="aud" required><?php foreach ($AUD as $k => $l): ?><option value="<?= $k ?>"><?= e($l) ?> (<?= count(audienceRows($k)) ?>)</option><?php endforeach; ?></select></label>
 <label>Subjek<input name="subject" required></label>
 <label class="full">Pesan<textarea name="body" rows="10" required>Dear {name},

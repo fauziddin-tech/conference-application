@@ -339,7 +339,7 @@ function head($t, $extra = '')
 <?php foreach (array_keys(LANGS) as $l): ?><link rel="alternate" hreflang="<?= $l ?>" href="<?= e(absUrl(ltrim(substr(langUrl($l), strlen(BASE)), '/'))) ?>"><?php endforeach; ?>
 <?php if (setting('logo_url')): ?><meta property="og:image" content="<?= e(imgSrc(setting('logo_url'))) ?>"><link rel="icon" href="<?= e(imgSrc(setting('logo_url'))) ?>"><?php endif; ?>
 <meta name="theme-color" content="#1d3a3a">
-<link rel="stylesheet" href="<?= $H ?>style.css?v=<?= @filemtime(__DIR__ . "/style.css") ?>"><?= $extra ?></head><body id="top">
+<link rel="stylesheet" href="<?= $H ?>style.css?v=<?= @filemtime(__DIR__ . "/style.css") ?>"><?= $extra ?></head><body id="top"<?= defined('ADMIN') ? ' class="adm"' : '' ?>>
 <a class="skip" href="#main"><?= te('Skip to content') ?></a>
 <nav><a class="brand" href="<?= $H ?>"><?php if (setting('logo_url')): ?><img src="<?= e(imgSrc(setting('logo_url'))) ?>" alt=""><?php endif; ?><?= e(brand()) ?></a><button class="burger" type="button" aria-label="Menu" aria-expanded="false" onclick="var n=this.parentNode;n.classList.toggle('open');this.setAttribute('aria-expanded',n.classList.contains('open'))">&#9776;</button><div class="links">
 <a href="<?= $H ?>#about"><?= te('About') ?></a><a href="<?= $H ?>#speakers"><?= te('Speakers') ?></a><a href="<?= $H ?>#cfp"><?= te('Call for Papers') ?></a><a href="<?= $H ?>#program"><?= te('Program') ?></a><a href="<?= $H ?>#register"><?= te('Registration') ?></a><a href="<?= $H ?>#venue"><?= te('Venue') ?></a><?php if (setting('journals')): ?><a href="<?= $H ?>#publication"><?= te('Publication') ?></a><?php endif; ?><a href="<?= $H ?>#contact"><?= te('Contact') ?></a><?php if (setting('submission_url')): ?><a href="<?= e(setting('submission_url')) ?>" target="_blank" rel="noopener"><?= te('Make Submission') ?></a><?php endif; ?>
@@ -395,6 +395,17 @@ m.addEventListener('click',function(e){if(e.target===m)m.hidden=true});document.
 var f=m.querySelector('form'),er=m.querySelector('.merr');
 f.addEventListener('submit',function(e){e.preventDefault();er.hidden=true;var b=f.querySelector('button.btn');b.disabled=true;
 fetch(f.action,{method:'POST',body:new FormData(f),headers:{'X-Requested-With':'fetch'},credentials:'same-origin'}).then(function(x){return x.json()}).then(function(j){if(j.ok){location.href=j.to}else{er.textContent=j.error||<?= json_encode(t('Log in failed.')) ?>;er.hidden=false;b.disabled=false}}).catch(function(){er.textContent=<?= json_encode(t('Something went wrong. Reload the page and try again.')) ?>;er.hidden=false;b.disabled=false})})})();</script>
+<?php $adm = defined('ADMIN'); ?><div id="cfm" class="modal" hidden><div class="mbox cbox" role="alertdialog" aria-modal="true" aria-labelledby="cfmt" aria-describedby="cfmm">
+<div class="cic" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></div>
+<h3 id="cfmt"><?= $adm ? 'Konfirmasi' : te('Confirm') ?></h3><p id="cfmm"></p>
+<div class="cact"><button type="button" class="btn ghost2" id="cfmn"><?= $adm ? 'Batal' : te('Cancel') ?></button><button type="button" class="btn" id="cfmy" data-ok="<?= $adm ? 'Ya, lanjutkan' : te('Yes, continue') ?>" data-del="<?= $adm ? 'Ya, hapus' : te('Yes, delete') ?>"></button></div></div></div>
+<script>(function(){var m=document.getElementById('cfm'),t=document.getElementById('cfmm'),y=document.getElementById('cfmy'),n=document.getElementById('cfmn'),f=null,last=null;
+document.addEventListener('submit',function(e){var x=e.target;if(!x.dataset||!x.dataset.confirm)return;if(x.dataset.go==='1'){x.dataset.go='';return}
+e.preventDefault();e.stopImmediatePropagation();f=x;last=document.activeElement;t.textContent=x.dataset.confirm;var d=/^(hapus|delete|reset|remove)/i.test(x.dataset.confirm);
+y.classList.toggle('danger',d);y.textContent=d?y.dataset.del:y.dataset.ok;m.hidden=false;y.focus()},true);
+function close(){m.hidden=true;f=null;if(last&&last.focus)last.focus()}
+n.onclick=close;m.addEventListener('click',function(e){if(e.target===m)close()});document.addEventListener('keydown',function(e){if(!m.hidden&&e.key==='Escape')close()});
+y.onclick=function(){var x=f;m.hidden=true;f=null;if(!x)return;x.dataset.go='1';if(x.requestSubmit)x.requestSubmit();else x.submit()}})();</script>
 <div id="docm" class="modal docm" hidden><div class="dbox" role="dialog" aria-modal="true" aria-labelledby="docmt">
 <div class="dbar"><b id="docmt"><?= te('Preview') ?></b><span><button type="button" class="btn" id="docmp"><?= te('Print / Save PDF') ?></button> <a class="btn ghost2" id="docmo" href="#" target="_blank" rel="noopener"><?= te('Open in new tab') ?></a> <button type="button" class="mx" id="docmx" aria-label="<?= te('Close') ?>">&times;</button></span></div>
 <iframe id="docmf" title="<?= te('Document preview') ?>" src="about:blank"></iframe></div></div>

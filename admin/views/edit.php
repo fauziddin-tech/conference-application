@@ -13,6 +13,6 @@ if (!$x): ?><p>Akun tidak ditemukan. <a href="?p=pengguna">Kembali</a></p>
 <label>Peran<select name="role"><option value="peserta" <?= $x['role'] === 'peserta' ? 'selected' : '' ?>>Peserta</option><option value="reviewer" <?= $x['role'] === 'reviewer' ? 'selected' : '' ?>>Reviewer</option></select></label>
 <button class="btn">Simpan Perubahan</button></form>
 <h3>Reset Password</h3>
-<form method="post" class="card" onsubmit="return confirm('Reset password akun ini?')"><?= csrf() ?><input type="hidden" name="a" value="pwreset"><input type="hidden" name="id" value="<?= $x['id'] ?>">
+<form method="post" class="card" data-confirm="Reset password akun ini?"><?= csrf() ?><input type="hidden" name="a" value="pwreset"><input type="hidden" name="id" value="<?= $x['id'] ?>">
 <label class="full">Password baru (kosongkan untuk dibuatkan password acak)<input name="password" type="text" autocomplete="off" minlength="8"></label>
 <button class="btn">Reset Password</button></form>

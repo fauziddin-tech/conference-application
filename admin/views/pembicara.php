@@ -12,4 +12,4 @@
 <?php if ($i > 0): ?><form method="post"><?= csrf() ?><input type="hidden" name="a" value="spup"><input type="hidden" name="i" value="<?= $i ?>"><button class="link plain" title="Naikkan">&uarr; Naik</button></form><?php endif; ?>
 <?php if ($i < count($sp) - 1): ?><form method="post"><?= csrf() ?><input type="hidden" name="a" value="spdown"><input type="hidden" name="i" value="<?= $i ?>"><button class="link plain" title="Turunkan">&darr; Turun</button></form><?php endif; ?>
 <a class="js-doc" data-title="Sertifikat · <?= e($s[1] ?? '') ?>" href="../doc.php?t=spcert&i=<?= $i ?>" target="_blank">Sertifikat</a>
-<form method="post" onsubmit="return confirm('Hapus pembicara ini?')"><?= csrf() ?><input type="hidden" name="a" value="spdel"><input type="hidden" name="i" value="<?= $i ?>"><button class="link">Hapus pembicara</button></form></div></div><?php endforeach; ?>
+<form method="post" data-confirm="Hapus pembicara ini?"><?= csrf() ?><input type="hidden" name="a" value="spdel"><input type="hidden" name="i" value="<?= $i ?>"><button class="link">Hapus pembicara</button></form></div></div><?php endforeach; ?>

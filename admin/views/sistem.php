@@ -102,5 +102,5 @@ $icon = ['ok' => '&#10004;', 'warn' => '!', 'fail' => '&#10006;']; ?>
 <p><small>File unggahan (naskah, bukti bayar, foto) berada di folder <code>uploads/</code> — sertakan dalam fitur <b>Backup</b> cPanel (Home Directory) secara berkala.</small></p></div></div>
 <?php if ($bl): ?><div class="scroll"><table><tr><th>File</th><th>Ukuran</th><th>Waktu</th><th></th></tr>
 <?php foreach ($bl as $b): ?><tr><td><?= e($b['name']) ?></td><td><?= number_format($b['size'] / 1024, 1, ',', '.') ?> KB</td><td><?= e(date('d M Y H:i', $b['time'])) ?></td>
-<td class="nowrap"><a href="?p=backupdl&f=<?= e(urlencode($b['name'])) ?>">Unduh</a> &nbsp; <form method="post" class="inline" onsubmit="return confirm('Hapus file backup ini?')"><?= csrf() ?><input type="hidden" name="a" value="backupdel"><input type="hidden" name="f" value="<?= e($b['name']) ?>"><button class="link">Hapus</button></form></td></tr><?php endforeach; ?></table></div>
+<td class="nowrap"><a href="?p=backupdl&f=<?= e(urlencode($b['name'])) ?>">Unduh</a> &nbsp; <form method="post" class="inline" data-confirm="Hapus file backup ini?"><?= csrf() ?><input type="hidden" name="a" value="backupdel"><input type="hidden" name="f" value="<?= e($b['name']) ?>"><button class="link">Hapus</button></form></td></tr><?php endforeach; ?></table></div>
 <?php else: ?><p>Belum ada file backup.</p><?php endif; ?>

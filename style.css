@@ -237,3 +237,13 @@ pre.cmd{background:var(--deep);color:#f1e9d8;padding:10px 12px;border-radius:8px
 nav .langsw a{margin:0;padding:4px 10px;color:var(--sand);letter-spacing:.04em}nav .langsw a.on{background:var(--tan);color:var(--deep)}nav .langsw a:not(.on):hover{background:#ffffff1a}
 @media(max-width:1100px){.langsw{margin:8px 0 4px}nav .links .langsw a{margin:0}}
 .trrow{margin-bottom:12px}.trrow .src{background:var(--bg);border:1px dashed var(--line);border-radius:8px;padding:8px 10px;margin-top:4px;font-size:.92rem}
+/* ===== dialog konfirmasi aplikasi ===== */
+.cbox{max-width:420px;text-align:center;padding:26px 24px 20px}
+.cbox .cic{width:52px;height:52px;margin:0 auto 10px;border-radius:50%;background:#c77d1a22;color:#c77d1a;display:flex;align-items:center;justify-content:center}
+.cbox h3{margin:0 0 6px;font-family:system-ui,sans-serif}.cbox p{margin:0 0 18px;font-family:system-ui,sans-serif;line-height:1.5}
+.cact{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}.cact .btn{min-width:120px}
+.btn.danger{background:#b42323;color:#fff!important}.btn.danger:hover{background:#8f1b1b;filter:none}
+.cbox:has(.danger) .cic{background:#b4232322;color:#b42323}
+#cfm{z-index:200}
+/* baris filter: kotak centang tidak melebar */
+.filters .chk{flex:none;display:inline-flex;align-items:center;gap:6px;margin:0;white-space:nowrap;font-weight:600}.filters .chk input{width:auto;margin:0;flex:none}

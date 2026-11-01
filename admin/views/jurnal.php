@@ -15,4 +15,4 @@
 <label class="full">Catatan<input name="note" value="<?= e($j[8]) ?>"></label>
 <?php if (isurl($j[7])): ?><div class="full"><small>Pratinjau cover:</small><br><img class="thumb" style="width:80px;height:auto;aspect-ratio:3/4" src="<?= e($j[7]) ?>" alt="" referrerpolicy="no-referrer"></div><?php endif; ?>
 <div class="full"><button class="btn">Simpan</button></div></form>
-<form method="post" onsubmit="return confirm('Hapus jurnal ini?')" style="margin-top:10px"><?= csrf() ?><input type="hidden" name="a" value="jrdel"><input type="hidden" name="i" value="<?= $i ?>"><button class="link">Hapus jurnal</button></form></details><?php endforeach; ?>
+<form method="post" data-confirm="Hapus jurnal ini?" style="margin-top:10px"><?= csrf() ?><input type="hidden" name="a" value="jrdel"><input type="hidden" name="i" value="<?= $i ?>"><button class="link">Hapus jurnal</button></form></details><?php endforeach; ?>
