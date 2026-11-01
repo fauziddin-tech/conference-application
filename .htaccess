@@ -1,4 +1,9 @@
 Options -Indexes
-<Files "config.php">
+<FilesMatch "^(config\.php|install\.lock|README\.md|\.gitignore)$">
 Require all denied
-</Files>
+</FilesMatch>
+# Batas unggah (aktif bila PHP berjalan sebagai modul Apache; di cPanel lain atur lewat "MultiPHP INI Editor")
+<IfModule mod_php.c>
+php_value upload_max_filesize 12M
+php_value post_max_size 25M
+</IfModule>

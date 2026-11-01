@@ -1,0 +1,12 @@
+# konfigurasi lokal (berisi password database)
+config.php
+install/install.lock
+# file unggahan pengguna
+uploads/*
+!uploads/.htaccess
+!uploads/index.html
+!uploads/private/
+uploads/private/*
+!uploads/private/.htaccess
+!uploads/private/index.html
+.DS_Store

@@ -1,0 +1,15 @@
+<?php if (!defined('ADMIN')) exit;
+$role = in_array($_GET['role'] ?? '', ['peserta', 'reviewer', 'admin'], true) ? $_GET['role'] : 'peserta';
+$r = $pdo->prepare("SELECT u.*,(SELECT COUNT(*) FROM registrations r WHERE r.user_id=u.id) hasreg,(SELECT COUNT(*) FROM reviews v WHERE v.reviewer_id=u.id) nrev FROM users u WHERE role=? ORDER BY id DESC"); $r->execute([$role]); $r = $r->fetchAll(); ?>
+<p class="tabs small"><?php foreach (['peserta' => 'Peserta', 'reviewer' => 'Reviewer', 'admin' => 'Admin'] as $k => $l): ?><a href="?p=pengguna&role=<?= $k ?>" class="<?= $role === $k ? 'on' : '' ?>"><?= $l ?></a><?php endforeach; ?></p>
+<p>Total akun: <b><?= count($r) ?></b> &middot; <a href="?p=export">Ekspor akun (CSV)</a></p>
+<div class="scroll"><table><tr><th>ID</th><th>Nama</th><th>Email</th><?php if ($role === 'peserta'): ?><th>Kategori</th><th>Formulir</th><?php endif; ?><th>Institusi</th><?php if ($role === 'reviewer'): ?><th>Penugasan</th><?php endif; ?><th>Login terakhir</th><?php if ($role === 'peserta'): ?><th>Status</th><?php endif; ?><th></th></tr>
+<?php foreach ($r as $x): ?><tr><td><?= no('U', $x['id']) ?></td><td><?= e($x['name']) ?></td><td><?= e($x['email']) ?></td><?php if ($role === 'peserta'): ?><td><?= e($x['category']) ?></td><td><?= $x['hasreg'] ? '&#10004;' : '<small>belum</small>' ?></td><?php endif; ?><td><?= e($x['institution']) ?></td><?php if ($role === 'reviewer'): ?><td><?= (int)$x['nrev'] ?></td><?php endif; ?><td><small><?= e($x['last_login'] ?: '-') ?></small></td>
+<?php if ($role === 'peserta'): ?><td><form method="post" class="inline"><?= csrf() ?><input type="hidden" name="a" value="status"><input type="hidden" name="id" value="<?= $x['id'] ?>">
+<select name="status" onchange="this.form.submit()"><?php foreach ($ULBL as $s => $l): ?><option value="<?= $s ?>" <?= $x['status'] === $s ? 'selected' : '' ?>><?= e($l) ?></option><?php endforeach; ?></select></form></td><?php endif; ?>
+<td><?php if ($role !== 'admin'): ?><a href="?p=edit&id=<?= $x['id'] ?>">Edit</a> &nbsp; <form method="post" class="inline" onsubmit="return confirm('Hapus akun ini beserta data pendaftaran/review dan file-nya?')"><?= csrf() ?><input type="hidden" name="a" value="del"><input type="hidden" name="id" value="<?= $x['id'] ?>"><button class="link">Hapus</button></form><?php endif; ?></td></tr><?php endforeach; ?></table></div>
+<h3>Tambah Akun Reviewer / Admin</h3>
+<form method="post" class="card"><?= csrf() ?><input type="hidden" name="a" value="uadd">
+<label>Nama (beserta gelar) *<input name="name" required></label><label>Email *<input type="email" name="email" required></label>
+<label>Institusi<input name="institution"></label><label>Peran<select name="role"><option value="reviewer">Reviewer</option><option value="admin">Admin</option></select></label>
+<label class="chk full"><input type="checkbox" name="send" value="1" checked> Kirim info login (password acak) ke email</label><button class="btn">Buat Akun</button></form>

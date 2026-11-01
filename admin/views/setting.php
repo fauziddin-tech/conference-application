@@ -1,0 +1,43 @@
+<?php if (!defined('ADMIN')) exit;
+$in = function ($k, $l, $type = 'text', $ph = '') { return '<label>' . $l . '<input type="' . $type . '" name="' . $k . '" value="' . e(setting($k)) . '" placeholder="' . e($ph) . '"></label>'; };
+$ta = function ($k, $l, $r = 4) { return '<label class="full">' . $l . '<textarea name="' . $k . '" rows="' . $r . '">' . e(setting($k)) . '</textarea></label>'; };
+$cb = function ($k, $l) { return '<label class="chk full"><input type="checkbox" name="' . $k . '" value="1"' . (setting($k) === '1' ? ' checked' : '') . '> ' . $l . '</label>'; }; ?>
+<form method="post" enctype="multipart/form-data" class="card settings"><?= csrf() ?><input type="hidden" name="a" value="set">
+<h3>Status</h3>
+<?= $cb('reg_open', '<b>Pendaftaran dibuka</b> (akun &amp; formulir baru)') ?>
+<?= $ta('reg_close_msg', 'Pesan saat pendaftaran ditutup', 2) ?>
+<?= $cb('cert_open', '<b>Buka unduhan e-certificate</b> (aktifkan setelah acara)') ?>
+<?= $cb('cert_checkin', 'Peserta offline wajib check-in untuk mendapat sertifikat') ?>
+<?= $cb('blind_review', 'Blind review (identitas penulis disembunyikan dari reviewer)') ?>
+<h3>Identitas Konferensi</h3>
+<?= $in('name', 'Nama Konferensi') ?><?= $in('tagline', 'Tagline / Tema') ?><?= $in('organizer', 'Penyelenggara') ?>
+<label>Logo <small>(JPG/PNG/WEBP; dipakai di navigasi, dokumen &amp; sertifikat)</small><input type="file" name="logo" accept="image/jpeg,image/png,image/webp"><?php if (setting('logo_url')): ?><img class="thumb" src="<?= e(imgSrc(setting('logo_url'))) ?>" alt=""><?php endif; ?></label>
+<?= $in('logo_url', 'atau URL logo', 'text', 'https://...') ?>
+<?= $in('website', 'Website') ?><?= $in('email', 'Email resmi panitia', 'email') ?>
+<?= $in('mail_from', 'Email pengirim notifikasi <small>(mis. noreply@domainanda.com)</small>', 'email') ?>
+<?= $ta('about', 'Tentang', 6) ?>
+<h3>Waktu &amp; Tempat</h3>
+<?= $in('date', 'Tanggal (teks tampilan)') ?><?= $in('time', 'Waktu (teks tampilan)') ?>
+<?= $in('event_start', 'Mulai acara <small>(hitung mundur, kalender, SEO)</small>', 'datetime-local') ?><?= $in('event_end', 'Selesai acara', 'datetime-local') ?>
+<?= $in('timezone', 'Zona waktu', 'text', 'Asia/Jakarta') ?><?= $in('location', 'Lokasi') ?>
+<?= $in('venue_url', 'Link info lokasi/hotel', 'url') ?><?= $in('map_url', 'URL embed Google Maps') ?>
+<?= $ta('venue_info', 'Deskripsi lokasi', 3) ?>
+<h3>Call for Papers &amp; Naskah</h3>
+<?= $ta('cfp_info', 'Informasi Call for Papers (topik dikelola di Konten &rarr; Topik)', 4) ?>
+<?= $in('submission_url', 'Link Make Submission eksternal (OJS/EasyChair; kosongkan jika tidak dipakai)', 'url') ?>
+<?= $in('abs_min', 'Abstrak minimal (kata)', 'number') ?><?= $in('abs_max', 'Abstrak maksimal (kata)', 'number') ?>
+<h3>Biaya &amp; Pembayaran</h3>
+<?= $ta('fees', 'Biaya: <code>Kategori|IDR|USD|Early IDR|Early USD</code> (satu per baris; kolom early opsional). Kategori berisi kata "Presenter" mewajibkan naskah, "Online"/"Offline" mengunci jenis kehadiran.', 5) ?>
+<?= $in('early_deadline', 'Batas early bird', 'date') ?>
+<?= $ta('payment_info', 'Instruksi pembayaran (rekening bank, atas nama, SWIFT, PayPal, dll.)', 4) ?>
+<?= $ta('invoice_note', 'Catatan kaki invoice/kwitansi (opsional)', 2) ?>
+<h3>Peserta Online</h3>
+<?= $in('online_link', 'Link Zoom/Meet/YouTube <small>(hanya tampil untuk peserta online terverifikasi)</small>', 'url') ?>
+<?= $ta('online_info', 'Info akses online (Meeting ID, passcode, aturan)', 3) ?>
+<h3>Dokumen &amp; Sertifikat</h3>
+<?= $ta('signers', 'Penandatangan: <code>Nama|Jabatan</code> per baris (maks. 3; baris pertama menandatangani LoA &amp; surat)', 3) ?>
+<h3>Konten Beranda</h3>
+<?= $ta('benefits', 'Benefit (satu per baris)', 4) ?><?= $ta('supporters', 'Dukungan institusi (satu nama per baris)', 4) ?>
+<?= $ta('contacts', 'Kontak WhatsApp (<code>Nama|Nomor</code>)', 4) ?><?= $ta('secretariat', 'Sekretariat', 3) ?>
+<button class="btn">Simpan Pengaturan</button></form>
+<p><small>Pembicara dikelola di tab <a href="?p=pembicara">Pembicara</a>; tanggal penting, topik, komite, sponsor, FAQ, pengumuman dan unduhan di tab <a href="?p=konten">Konten</a>.</small></p>

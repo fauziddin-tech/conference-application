@@ -1,0 +1,14 @@
+<?php if (!defined('ADMIN')) exit; $sp = rows('speakers'); ?>
+<h3>Tambah Pembicara</h3><form method="post" enctype="multipart/form-data" class="card"><?= csrf() ?><input type="hidden" name="a" value="spadd">
+<label>Peran<input name="role" list="roles" placeholder="Keynote Speaker"></label><datalist id="roles"><option>Open Speech</option><option>Keynote Speaker</option><option>Invited Speaker</option><option>Plenary Speaker</option><option>Chairman of the Committee</option></datalist>
+<label>Nama (beserta gelar)<input name="name" required></label><label>Afiliasi / Institusi<input name="affil"></label>
+<label>Foto (opsional)<input type="file" name="photo" accept="image/jpeg,image/png,image/webp"></label><button class="btn">Tambah</button></form>
+<h3>Daftar Pembicara</h3><p>Edit nama, peran, dan afiliasi langsung di tiap baris lalu klik Simpan. Foto: JPG/PNG/WEBP, maks. 2 MB, disarankan persegi. Urutan dalam satu peran mengikuti urutan di sini.</p>
+<?php foreach ($sp as $i => $s): ?><div class="sprow"><?php if (!empty($s[3])): ?><img class="thumb" src="../uploads/<?= e($s[3]) ?>" alt=""><?php else: ?><span class="thumb"></span><?php endif; ?>
+<form method="post" class="edit"><?= csrf() ?><input type="hidden" name="a" value="spedit"><input type="hidden" name="i" value="<?= $i ?>">
+<input name="role" value="<?= e($s[0]) ?>" placeholder="Peran" list="roles"><input name="name" value="<?= e($s[1] ?? '') ?>" placeholder="Nama" required><input name="affil" value="<?= e($s[2] ?? '') ?>" placeholder="Afiliasi"><button class="btn">Simpan</button></form>
+<div class="acts"><form method="post" enctype="multipart/form-data"><?= csrf() ?><input type="hidden" name="a" value="photo"><input type="hidden" name="i" value="<?= $i ?>"><input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required><button class="btn">Unggah foto</button></form>
+<?php if (!empty($s[3])): ?><form method="post"><?= csrf() ?><input type="hidden" name="a" value="rmphoto"><input type="hidden" name="i" value="<?= $i ?>"><button class="link">Hapus foto</button></form><?php endif; ?>
+<?php if ($i > 0): ?><form method="post"><?= csrf() ?><input type="hidden" name="a" value="spup"><input type="hidden" name="i" value="<?= $i ?>"><button class="link plain" title="Naikkan">&uarr; Naik</button></form><?php endif; ?>
+<?php if ($i < count($sp) - 1): ?><form method="post"><?= csrf() ?><input type="hidden" name="a" value="spdown"><input type="hidden" name="i" value="<?= $i ?>"><button class="link plain" title="Turunkan">&darr; Turun</button></form><?php endif; ?>
+<form method="post" onsubmit="return confirm('Hapus pembicara ini?')"><?= csrf() ?><input type="hidden" name="a" value="spdel"><input type="hidden" name="i" value="<?= $i ?>"><button class="link">Hapus pembicara</button></form></div></div><?php endforeach; ?>
