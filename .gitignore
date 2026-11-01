@@ -10,3 +10,5 @@ uploads/private/*
 !uploads/private/.htaccess
 !uploads/private/index.html
 .DS_Store
+# paket unggah cPanel (hasil build, bisa dibuat ulang dengan git archive)
+*.zip
