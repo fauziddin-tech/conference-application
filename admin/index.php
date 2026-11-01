@@ -172,20 +172,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         else $pdo->prepare("INSERT INTO items(sort,title,subtitle,body,url,image,extra,kind) VALUES(?,?,?,?,?,?,?,?)")->execute(array_merge(array_values($v), [$kind]));
         $msg = 'Tersimpan.' . ($er ? ' ' . $er : '');
         if ($kind === 'news' && !$old && !empty($_POST['mail'])) {
-            $n = 0; foreach (audienceRows('all') as $r) $n += sendMail($r['email'], '[' . brand() . '] ' . $v['title'], "Dear " . $r['name'] . ",\n\n" . $v['body'] . ($v['url'] ? "\n\n" . $v['url'] : '') . "\n\n--\n" . setting('name') . "\n" . absUrl()) ? 1 : 0;
-            $msg .= " Email terkirim ke $n peserta.";
+            [$n, $tot] = sendBatch(array_map(function ($r) use ($v) { return [$r['email'], '[' . brand() . '] ' . $v['title'], "Dear " . $r['name'] . ",\n\n" . $v['body'] . ($v['url'] ? "\n\n" . $v['url'] : '') . "\n\n--\n" . setting('name') . "\n" . absUrl()]; }, audienceRows('all')));
+            $msg .= " Email terkirim ke $n dari $tot peserta.";
         }
+        break;
+    case 'mailtest':
+        $back = '?p=setting#uji-email'; $to = strtolower(post('to')) ?: $u['email'];
+        $ok = sendMail($to, '[' . brand() . '] Test email', "This is a test email from " . setting('name') . ".\n\nSent: " . date('Y-m-d H:i:s') . " (" . setting('timezone', 'Asia/Jakarta') . ")\nProvider: " . (resendOn() ? 'Resend API' : 'PHP mail()') . "\nFrom: " . mailFrom()[0] . "\n\nIf you received this, email notifications are working.\n" . absUrl(), $err);
+        $msg = $ok ? "Email uji berhasil dikirim ke $to lewat " . (resendOn() ? 'Resend' : 'mail() hosting') . '. Periksa kotak masuk (dan folder spam).' : "Email uji GAGAL ke $to: $err";
         break;
     case 'bulk':
         $back = '?p=email'; $aud = post('aud'); $sub = post('subject'); $body = post('body');
         if (!isset($AUD[$aud]) || $sub === '' || $body === '') { $msg = 'Pilih penerima, isi subjek dan pesan.'; break; }
-        @set_time_limit(600); $n = 0; $tot = 0;
-        foreach (audienceRows($aud) as $r) { $tot++; $n += sendMail($r['email'], '[' . brand() . '] ' . $sub, strtr($body, ['{name}' => $r['name'], '{regno}' => $r['regno'], '{email}' => $r['email']]) . "\n\n--\n" . setting('name') . "\n" . absUrl()) ? 1 : 0; }
-        $msg = "Email terkirim: $n dari $tot penerima."; break;
+        [$n, $tot, $le] = sendBatch(array_map(function ($r) use ($sub, $body) { return [$r['email'], '[' . brand() . '] ' . $sub, strtr($body, ['{name}' => $r['name'], '{regno}' => $r['regno'], '{email}' => $r['email']]) . "\n\n--\n" . setting('name') . "\n" . absUrl()]; }, audienceRows($aud)));
+        $msg = "Email terkirim: $n dari $tot penerima." . ($le ? " Error terakhir: $le" : ''); break;
     case 'set':
-        foreach (['name', 'tagline', 'organizer', 'date', 'time', 'event_start', 'event_end', 'timezone', 'location', 'venue_info', 'venue_url', 'map_url', 'website', 'email', 'mail_from', 'logo_url', 'submission_url', 'about', 'cfp_info', 'fees', 'early_deadline', 'payment_info', 'invoice_note', 'supporters', 'benefits', 'contacts', 'secretariat', 'online_link', 'online_info', 'signers', 'abs_min', 'abs_max', 'reg_close_msg', 'turnstile_site', 'turnstile_secret', 'blocked_domains'] as $k)
+        foreach (['name', 'tagline', 'organizer', 'date', 'time', 'event_start', 'event_end', 'timezone', 'location', 'venue_info', 'venue_url', 'map_url', 'website', 'email', 'mail_from', 'logo_url', 'submission_url', 'about', 'cfp_info', 'fees', 'early_deadline', 'payment_info', 'invoice_note', 'supporters', 'benefits', 'contacts', 'secretariat', 'online_link', 'online_info', 'signers', 'abs_min', 'abs_max', 'reg_close_msg', 'turnstile_site', 'turnstile_secret', 'blocked_domains', 'mail_from_name'] as $k)
             if (isset($_POST[$k])) setSetting($k, trim((string)$_POST[$k]));
         foreach (['reg_open', 'cert_open', 'cert_checkin', 'blind_review'] as $k) setSetting($k, empty($_POST[$k]) ? '0' : '1');
+        if (isset($_POST['mail_driver'])) setSetting('mail_driver', post('mail_driver') === 'resend' ? 'resend' : 'mail');
+        if (!empty($_POST['resend_key_clear'])) setSetting('resend_key', '');
+        elseif (post('resend_key') !== '') {
+            if (!preg_match('/^re_[A-Za-z0-9_]{10,}$/', post('resend_key'))) $msg = 'API key Resend tidak valid (harus diawali "re_"). Key tidak disimpan; pengaturan lain tersimpan.';
+            else setSetting('resend_key', post('resend_key'));
+        }
+        if (setting('mail_driver') === 'resend' && setting('resend_key') === '') $msg = ($msg ?? 'Pengaturan disimpan.') . ' Peringatan: Resend dipilih tetapi API key belum diisi, email tetap dikirim lewat mail() hosting.';
         if (!in_array(setting('timezone'), timezone_identifiers_list(), true)) setSetting('timezone', 'Asia/Jakarta');
         if (!empty($_FILES['logo']['name'])) { $er = ''; $fn = upImage($_FILES['logo'], $er, 'logo'); if ($fn) { rmImage(setting('logo_url')); setSetting('logo_url', $fn); } else $msg = $er; }
         $msg = $msg ?? 'Pengaturan disimpan.'; break;

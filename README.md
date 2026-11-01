@@ -35,7 +35,7 @@ Ditulis dengan PHP + MySQL tanpa framework, sehingga bisa langsung diunggah ke s
 - **Check-in** di lokasi dengan memindai QR e-ticket
 - Kelola akun (peserta, reviewer, admin), reset password
 - Kelola pembicara (foto, urutan), jurnal, agenda, dan konten (tanggal penting, topik, komite, sponsor, FAQ, pengumuman, unduhan)
-- **Email massal** per kelompok penerima + log email
+- **Email massal** per kelompok penerima + log email; pengiriman via **Resend API** atau `mail()` hosting, dengan tombol kirim email uji
 - Pengaturan: buka/tutup pendaftaran, buka sertifikat, wajib check-in, early bird, logo, penandatangan, link online, dll.
 - Ekspor CSV (registrasi, akun, review) — aman dibuka di Excel
 
@@ -57,6 +57,18 @@ Ditulis dengan PHP + MySQL tanpa framework, sehingga bisa langsung diunggah ke s
 
 Disarankan: PHP 7.4+ (diuji di PHP 8.3) dan MySQL 5.7+/MariaDB 10.3+, ekstensi `pdo_mysql`, `mbstring`, `gd`.
 Batas unggah file 10 MB per file — sesuaikan `upload_max_filesize`/`post_max_size` di *MultiPHP INI Editor* bila perlu.
+
+## Email via Resend (disarankan)
+
+1. Di [resend.com](https://resend.com) → **Domains** → *Add domain* (mis. `picoe.org`), lalu tambahkan record DNS yang diminta
+   (di Cloudflare: DNS → Records, set **DNS only** / awan abu-abu) sampai statusnya **Verified**.
+2. **API Keys** → *Create API key* (izin *Sending access* cukup).
+3. Panel admin → **Pengaturan** → *Pengiriman Email*: pilih **Resend API**, tempel API key, isi email pengirim
+   dengan domain yang sudah verified (mis. `noreply@picoe.org`), lalu **Simpan**.
+4. Di bagian **Uji Pengiriman Email**, kirim email uji. Hasil dan pesan error tercatat di tab **Email → Log Email**.
+
+Email massal dikirim lewat endpoint batch Resend (maks. 100 email per permintaan). Perhatikan kuota paket Resend Anda.
+Hosting harus mengaktifkan ekstensi PHP **cURL**.
 
 ## Upgrade dari versi lama
 

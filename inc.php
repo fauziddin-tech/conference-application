@@ -157,17 +157,76 @@ function spamCheck($name, $email)
 }
 
 /* ---------- email ---------- */
-function sendMail($to, $subject, $body)
+/** Alamat pengirim & reply-to. Dengan Resend, alamat pengirim harus memakai domain yang sudah diverifikasi di Resend. */
+function mailFrom()
 {
-    global $pdo;
-    if (!filter_var($to, FILTER_VALIDATE_EMAIL)) return false;
     $from = setting('mail_from');
     if (!filter_var($from, FILTER_VALIDATE_EMAIL)) $from = 'noreply@' . preg_replace('/^www\./', '', preg_replace('/:\d+$/', '', host()));
     $reply = filter_var(setting('email'), FILTER_VALIDATE_EMAIL) ? setting('email') : $from;
-    $h = "From: =?UTF-8?B?" . base64_encode(brand()) . "?= <$from>\r\nReply-To: $reply\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit";
+    return [$from, $reply];
+}
+function resendOn() { return setting('mail_driver') === 'resend' && setting('resend_key') !== ''; }
+/** Panggil Resend API (https://resend.com/docs/api-reference). Mengembalikan array respons atau null + $err. */
+function resendCall($path, $payload, &$err)
+{
+    $err = '';
+    if (!function_exists('curl_init')) { $err = 'Ekstensi PHP cURL tidak aktif di hosting.'; return null; }
+    $c = curl_init((defined('RESEND_API') ? RESEND_API : 'https://api.resend.com') . $path);
+    curl_setopt_array($c, [CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 20, CURLOPT_CONNECTTIMEOUT => 8,
+        CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . setting('resend_key'), 'Content-Type: application/json', 'User-Agent: conference-application/1.0'],
+        CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)]);
+    $raw = curl_exec($c); $code = (int)curl_getinfo($c, CURLINFO_HTTP_CODE); $cerr = curl_error($c); curl_close($c);
+    if ($raw === false) { $err = 'Koneksi ke Resend gagal: ' . $cerr; return null; }
+    $j = json_decode((string)$raw, true);
+    if ($code >= 200 && $code < 300 && is_array($j)) return $j;
+    $err = 'Resend HTTP ' . $code . ': ' . (is_array($j) && isset($j['message']) ? $j['message'] : mb_substr((string)$raw, 0, 200));
+    return null;
+}
+function resendPayload($to, $subject, $body)
+{
+    [$from, $reply] = mailFrom();
+    $name = trim(str_replace(['<', '>', '"', "\r", "\n"], '', setting('mail_from_name') ?: brand()));
+    return ['from' => ($name !== '' ? $name . ' <' . $from . '>' : $from), 'to' => [$to], 'reply_to' => $reply, 'subject' => $subject, 'text' => $body];
+}
+function mailLog($to, $subject, $ok, $err = '', $prov = '')
+{
+    global $pdo;
+    try { $pdo->prepare("INSERT INTO mail_log(to_addr,subject,ok,error,provider) VALUES(?,?,?,?,?)")->execute([$to, mb_substr($subject, 0, 250), $ok ? 1 : 0, $err !== '' ? mb_substr($err, 0, 250) : null, $prov]); } catch (Exception $x) {}
+}
+/** Kirim satu email teks. Memakai Resend bila diaktifkan di Pengaturan, selain itu mail() bawaan hosting. */
+function sendMail($to, $subject, $body, &$err = null)
+{
+    $err = '';
+    if (!filter_var($to, FILTER_VALIDATE_EMAIL)) { $err = 'Alamat email tidak valid.'; return false; }
+    if (resendOn()) {
+        $r = resendCall('/emails', resendPayload($to, $subject, $body), $err);
+        $ok = !empty($r['id']);
+        if ($r !== null && !$ok) $err = 'Respons Resend tidak berisi id email.';
+        mailLog($to, $subject, $ok, $err, 'resend');
+        return $ok;
+    }
+    [$from, $reply] = mailFrom();
+    $h = "From: =?UTF-8?B?" . base64_encode(setting('mail_from_name') ?: brand()) . "?= <$from>\r\nReply-To: $reply\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit";
     $ok = function_exists('mail') ? @mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', $body, $h, '-f' . $from) : false;
-    try { $pdo->prepare("INSERT INTO mail_log(to_addr,subject,ok) VALUES(?,?,?)")->execute([$to, mb_substr($subject, 0, 250), $ok ? 1 : 0]); } catch (Exception $x) {}
+    if (!$ok) $err = 'Fungsi mail() hosting gagal mengirim.';
+    mailLog($to, $subject, $ok, $err, 'mail');
     return $ok;
+}
+/** Kirim banyak email. Dengan Resend memakai endpoint batch (maks. 100 per permintaan). Mengembalikan [terkirim, total, error terakhir]. */
+function sendBatch($msgs)
+{
+    $msgs = array_values(array_filter($msgs, function ($m) { return filter_var($m[0], FILTER_VALIDATE_EMAIL); }));
+    @set_time_limit(600); $sent = 0; $last = '';
+    if (!resendOn()) { foreach ($msgs as $m) { if (sendMail($m[0], $m[1], $m[2], $e)) $sent++; else $last = $e; } return [$sent, count($msgs), $last]; }
+    foreach (array_chunk($msgs, 100) as $i => $chunk) {
+        if ($i) usleep(600000); // batas laju Resend (±2 permintaan/detik)
+        $r = resendCall('/emails/batch', array_map(function ($m) { return resendPayload($m[0], $m[1], $m[2]); }, $chunk), $err);
+        $ok = $r !== null && isset($r['data']) && is_array($r['data']);
+        if (!$ok) $last = $err ?: 'Respons batch Resend tidak dikenali.';
+        foreach ($chunk as $m) mailLog($m[0], $m[1], $ok, $ok ? '' : $last, 'resend');
+        if ($ok) $sent += count($chunk);
+    }
+    return [$sent, count($msgs), $last];
 }
 /** Kirim email berformat standar: salam + isi + tanda tangan panitia. */
 function notify($to, $name, $subject, $text)

@@ -7,6 +7,7 @@
 <label class="full">Pesan<textarea name="body" rows="10" required>Dear {name},
 
 </textarea></label><button class="btn">Kirim</button></form>
-<h3>Log Email Terakhir</h3><p><small>Jika banyak yang gagal, periksa pengaturan "Email pengirim" (gunakan email dengan domain website Anda) atau fitur email di cPanel.</small></p>
-<div class="scroll"><table><tr><th>Waktu</th><th>Kepada</th><th>Subjek</th><th>Status</th></tr>
-<?php foreach ($pdo->query("SELECT * FROM mail_log ORDER BY id DESC LIMIT 50") as $m): ?><tr><td><small><?= e($m['created_at']) ?></small></td><td><?= e($m['to_addr']) ?></td><td><?= e($m['subject']) ?></td><td><?= $m['ok'] ? '<span class="badge verified">terkirim</span>' : '<span class="badge rejected">gagal</span>' ?></td></tr><?php endforeach; ?></table></div>
+<p><small>Layanan pengirim: <b><?= resendOn() ? 'Resend API (batch, maks. 100 per permintaan)' : 'PHP mail() hosting' ?></b> &middot; <a href="?p=setting#email-kirim">ubah</a> &middot; <a href="?p=setting#uji-email">kirim email uji</a></small></p>
+<h3>Log Email Terakhir</h3><p><small>Jika gagal, baca kolom keterangan. Dengan Resend, pastikan domain email pengirim berstatus <b>Verified</b> di dashboard Resend.</small></p>
+<div class="scroll"><table><tr><th>Waktu</th><th>Kepada</th><th>Subjek</th><th>Via</th><th>Status</th><th>Keterangan</th></tr>
+<?php foreach ($pdo->query("SELECT * FROM mail_log ORDER BY id DESC LIMIT 50") as $m): ?><tr><td><small><?= e($m['created_at']) ?></small></td><td><?= e($m['to_addr']) ?></td><td><?= e($m['subject']) ?></td><td><small><?= e($m['provider'] ?? '') ?></small></td><td><?= $m['ok'] ? '<span class="badge verified">terkirim</span>' : '<span class="badge rejected">gagal</span>' ?></td><td><small><?= e($m['error'] ?? '') ?></small></td></tr><?php endforeach; ?></table></div>

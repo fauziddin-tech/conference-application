@@ -4,7 +4,7 @@
  * Dipakai oleh install/ (instalasi baru) dan inc.php (upgrade otomatis instalasi lama).
  * Setiap perubahan skema: naikkan DB_VERSION dan tambahkan langkahnya di migrate().
  */
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 function colExists(PDO $pdo, $t, $c)
 {
@@ -55,6 +55,9 @@ function migrate(PDO $pdo)
     $pdo->exec("CREATE TABLE IF NOT EXISTS items(id INT AUTO_INCREMENT PRIMARY KEY,kind VARCHAR(20) NOT NULL,sort INT DEFAULT 0,title VARCHAR(300),subtitle VARCHAR(300),body TEXT,url VARCHAR(500),image VARCHAR(500),extra VARCHAR(150),created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,KEY kind(kind,sort))$E");
     $pdo->exec("CREATE TABLE IF NOT EXISTS throttle(id INT AUTO_INCREMENT PRIMARY KEY,k VARCHAR(120) NOT NULL,ts INT NOT NULL,KEY k(k,ts))$E");
     $pdo->exec("CREATE TABLE IF NOT EXISTS mail_log(id INT AUTO_INCREMENT PRIMARY KEY,to_addr VARCHAR(150),subject VARCHAR(255),ok TINYINT,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)$E");
+    // --- v4: pengiriman email via Resend ---
+    addCol($pdo, 'mail_log', 'error', 'VARCHAR(255) NULL');
+    addCol($pdo, 'mail_log', 'provider', 'VARCHAR(10) NULL');
 
     // Pengaturan baru dengan nilai bawaan (tidak menimpa yang sudah ada)
     $def = [
@@ -68,6 +71,8 @@ function migrate(PDO $pdo)
         'blind_review' => '1', 'abs_min' => '50', 'abs_max' => '250',
         // v3: anti-spam
         'turnstile_site' => '', 'turnstile_secret' => '',
+        // v4: email
+        'mail_driver' => 'mail', 'resend_key' => '', 'mail_from_name' => '',
         'blocked_domains' => 'fextemp.com mailinator.com guerrillamail.com guerrillamail.info sharklasers.com grr.la 10minutemail.com 10minutemail.net temp-mail.org temp-mail.io tempmail.com tempmail.net tempmailo.com tempail.com yopmail.com yopmail.net trashmail.com trashmail.de getnada.com nada.email dispostable.com maildrop.cc throwawaymail.com emailondeck.com mohmal.com fakeinbox.com mintemail.com mytemp.email tmpmail.org tmpmail.net mail.tm 1secmail.com 1secmail.org 1secmail.net mailnesia.com spamgourmet.com mailcatch.com moakt.com emailfake.com fakemail.net burnermail.io inboxkitten.com mailpoof.com tempr.email discard.email spambox.us',
     ];
     $ins = $pdo->prepare("INSERT IGNORE INTO settings(k,v) VALUES(?,?)");

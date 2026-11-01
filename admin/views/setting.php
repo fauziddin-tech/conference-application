@@ -14,7 +14,6 @@ $cb = function ($k, $l) { return '<label class="chk full"><input type="checkbox"
 <label>Logo <small>(JPG/PNG/WEBP; dipakai di navigasi, dokumen &amp; sertifikat)</small><input type="file" name="logo" accept="image/jpeg,image/png,image/webp"><?php if (setting('logo_url')): ?><img class="thumb" src="<?= e(imgSrc(setting('logo_url'))) ?>" alt=""><?php endif; ?></label>
 <?= $in('logo_url', 'atau URL logo', 'text', 'https://...') ?>
 <?= $in('website', 'Website') ?><?= $in('email', 'Email resmi panitia', 'email') ?>
-<?= $in('mail_from', 'Email pengirim notifikasi <small>(mis. noreply@domainanda.com)</small>', 'email') ?>
 <?= $ta('about', 'Tentang', 6) ?>
 <h3>Waktu &amp; Tempat</h3>
 <?= $in('date', 'Tanggal (teks tampilan)') ?><?= $in('time', 'Waktu (teks tampilan)') ?>
@@ -36,6 +35,13 @@ $cb = function ($k, $l) { return '<label class="chk full"><input type="checkbox"
 <?= $ta('online_info', 'Info akses online (Meeting ID, passcode, aturan)', 3) ?>
 <h3>Dokumen &amp; Sertifikat</h3>
 <?= $ta('signers', 'Penandatangan: <code>Nama|Jabatan</code> per baris (maks. 3; baris pertama menandatangani LoA &amp; surat)', 3) ?>
+<h3 id="email-kirim">Pengiriman Email</h3>
+<label>Layanan pengirim<select name="mail_driver"><option value="mail">PHP mail() bawaan hosting</option><option value="resend"<?= setting('mail_driver') === 'resend' ? ' selected' : '' ?>>Resend API (disarankan)</option></select></label>
+<label>Resend API key <small><?= setting('resend_key') !== '' ? 'tersimpan: re_••••' . e(substr(setting('resend_key'), -4)) . ' &mdash; kosongkan agar tidak diubah' : 'belum diisi' ?></small><input type="password" name="resend_key" autocomplete="new-password" placeholder="re_xxxxxxxxxxxx"></label>
+<?php if (setting('resend_key') !== ''): ?><label class="chk full"><input type="checkbox" name="resend_key_clear" value="1"> Hapus API key yang tersimpan</label><?php endif; ?>
+<?= $in('mail_from', 'Email pengirim <small>(domain harus sudah <b>Verified</b> di Resend, mis. noreply@picoe.org)</small>', 'email') ?>
+<?= $in('mail_from_name', 'Nama pengirim <small>(kosong = singkatan konferensi)</small>') ?>
+<p class="full"><small>Balasan peserta diarahkan ke <b>Email resmi panitia</b> di atas. Buat API key di resend.com &rarr; API Keys &rarr; Create API key (izin <i>Sending access</i> cukup). Lalu uji di bagian &ldquo;Uji Pengiriman Email&rdquo; di bawah.</small></p>
 <h3>Anti-spam</h3>
 <p class="full"><small>Pendaftaran sudah otomatis menolak nama berisi tautan/simbol, email sementara, dan pengiriman form oleh bot. Untuk perlindungan terkuat, aktifkan <b>Cloudflare Turnstile</b> (gratis): Cloudflare Dashboard &rarr; Turnstile &rarr; Add widget &rarr; domain Anda &rarr; salin Site Key &amp; Secret Key ke sini. Kosongkan keduanya untuk menonaktifkan.</small></p>
 <?= $in('turnstile_site', 'Turnstile Site Key') ?><?= $in('turnstile_secret', 'Turnstile Secret Key', 'password') ?>
@@ -45,3 +51,7 @@ $cb = function ($k, $l) { return '<label class="chk full"><input type="checkbox"
 <?= $ta('contacts', 'Kontak WhatsApp (<code>Nama|Nomor</code>)', 4) ?><?= $ta('secretariat', 'Sekretariat', 3) ?>
 <button class="btn">Simpan Pengaturan</button></form>
 <p><small>Pembicara dikelola di tab <a href="?p=pembicara">Pembicara</a>; tanggal penting, topik, komite, sponsor, FAQ, pengumuman dan unduhan di tab <a href="?p=konten">Konten</a>.</small></p>
+<h3 id="uji-email">Uji Pengiriman Email</h3>
+<p>Layanan aktif: <b><?= resendOn() ? 'Resend API' : 'PHP mail() hosting' ?></b> &middot; Pengirim: <b><?= e(mailFrom()[0]) ?></b><?= setting('mail_driver') === 'resend' && !resendOn() ? ' &middot; <span class="tag spam">API key Resend belum diisi</span>' : '' ?></p>
+<form method="post" class="filters"><?= csrf() ?><input type="hidden" name="a" value="mailtest"><input type="email" name="to" value="<?= e($u['email']) ?>" required placeholder="email tujuan"><button class="btn">Kirim Email Uji</button></form>
+<p><small>Hasil setiap pengiriman tercatat di tab <a href="?p=email">Email</a> &rarr; Log Email.</small></p>
