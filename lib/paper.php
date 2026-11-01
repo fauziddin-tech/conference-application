@@ -100,7 +100,7 @@ function paperHistory($R, $view, $reviewerId = null)
                 if ($view !== 'author') echo '&middot; Skor <b>' . (int)$v['score'] . '/5</b> &middot; ';
                 echo '<span class="badge">' . e(lbl($REC, $v['recommendation'])) . '</span> <small>' . e(date('d M Y', strtotime($v['submitted_at']))) . '</small>';
                 echo '<p>' . nl2br(e($v['to_author'])) . '</p>';
-                if ($v['file']) echo '<p>&#128206; <a href="' . $base . 'file.php?rv=' . (int)$v['id'] . '">Unduh file berisi komentar reviewer</a></p>';
+                if ($v['file']) echo '<p class="att"><svg class="ic" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg> <a href="' . $base . 'file.php?rv=' . (int)$v['id'] . '">Unduh file berisi komentar reviewer</a></p>';
                 if ($view === 'admin' && $v['to_committee']) echo '<p><small>Rahasia untuk panitia:</small><br>' . nl2br(e($v['to_committee'])) . '</p>';
             }
             echo '</div>';
