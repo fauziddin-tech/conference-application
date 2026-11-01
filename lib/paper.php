@@ -121,3 +121,36 @@ function reviewerDone($uid)
 }
 function reviewerCertReady($uid) { return setting('cert_reviewer', '1') === '1' && reviewerDone($uid) > 0; }
 
+/* ---------- sertifikat pembicara & panitia (tanpa akun; dibuat admin) ---------- */
+/** Kode verifikasi stabil (HMAC dengan rahasia aplikasi), mis. SP3F9A…, CM12AB…. */
+function certCode($kind, $key)
+{
+    $sec = setting('app_secret');
+    if ($sec === '') { $sec = bin2hex(random_bytes(16)); setSetting('app_secret', $sec); }
+    return $kind . strtoupper(substr(hash_hmac('sha256', $kind . '|' . $key, $sec), 0, 10));
+}
+/** Peran pembicara dalam kalimat sertifikat. */
+function speakerRole($r)
+{
+    $r = trim((string)$r);
+    if ($r === '') return 'Speaker';
+    if (stripos($r, 'open speech') !== false || stripos($r, 'opening') !== false) return 'Opening Speaker';
+    return $r;
+}
+/** [nama, afiliasi, peran, kode, no] untuk satu baris pembicara. */
+function speakerCert($sp, $i) { $sp = array_pad($sp, 4, ''); return [$sp[1], $sp[2], speakerRole($sp[0]), certCode('SP', $sp[1]), no('SP', $i + 1)]; }
+function committeeCert($c)
+{
+    $role = trim($c['subtitle'] ?: 'Member');
+    if ($c['extra']) $role .= ' — ' . $c['extra'];
+    elseif (stripos($role, 'committee') === false) $role .= ' of the Organizing Committee';
+    return [$c['title'], $c['body'], $role, certCode('CM', $c['id']), no('CM', $c['id'])];
+}
+/** Cari pemilik kode SP/CM untuk halaman verifikasi: [jenis, nama, afiliasi, peran] atau null. */
+function findCertByCode($code)
+{
+    if (strpos($code, 'SP') === 0) foreach (rows('speakers') as $i => $sp) { $x = speakerCert($sp, $i); if (hash_equals($x[3], $code)) return ['Pembicara', $x[0], $x[1], $x[2]]; }
+    if (strpos($code, 'CM') === 0) foreach (items('committee') as $c) { $x = committeeCert($c); if (hash_equals($x[3], $code)) return ['Panitia', $x[0], $x[1], $x[2]]; }
+    return null;
+}
+

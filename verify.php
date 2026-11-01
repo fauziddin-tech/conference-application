@@ -7,13 +7,18 @@ if ($c !== '') {
         hit('verify:' . ip());
         $q = $pdo->prepare("SELECT r.*,u.institution FROM registrations r JOIN users u ON u.id=r.user_id WHERE r.ticket=?"); $q->execute([$c]); $R = $q->fetch();
         if (!$R && strpos($c, 'RV') === 0) { $q = $pdo->prepare("SELECT id,name,institution FROM users WHERE cert_code=? AND role='reviewer'"); $q->execute([$c]); $RVW = $q->fetch(); }
-        if (!$R && empty($RVW)) $err = 'Kode tidak ditemukan. Pastikan kode yang dimasukkan benar.';
+        if (!$R && empty($RVW) && preg_match('/^(SP|CM)/', $c)) $OTH = findCertByCode($c);
+        if (!$R && empty($RVW) && empty($OTH)) $err = 'Kode tidak ditemukan. Pastikan kode yang dimasukkan benar.';
     }
 }
 head('Verifikasi Dokumen'); ?><h2>Verifikasi Dokumen</h2>
 <p>Masukkan kode tiket yang tercantum pada sertifikat, LoA, atau surat dari panitia, atau pindai QR code pada dokumen.</p>
 <form method="get" class="card narrow"><label>Kode<input name="c" value="<?= e($c) ?>" required placeholder="mis. 3FA9C21B7D04" autocomplete="off"></label><button class="btn">Verifikasi</button></form>
 <?php if ($err): ?><p class="msg err"><?= e($err) ?></p><?php endif; ?>
+<?php if (!empty($OTH)): ?>
+<div class="panel verify ok"><h3>&#10004; Sertifikat <?= e(strtolower($OTH[0])) ?> sah</h3>
+<p><b><?= e($OTH[1]) ?></b><?= $OTH[2] ? '<br>' . e($OTH[2]) : '' ?></p><p>Peran: <b><?= e($OTH[3]) ?></b></p>
+<p><small><?= e(setting('name')) ?> &middot; <?= e(setting('date')) ?></small></p></div><?php endif; ?>
 <?php if (!empty($RVW)): $n = reviewerDone($RVW['id']); ?>
 <div class="panel verify <?= $n ? 'ok' : '' ?>"><h3><?= $n ? '&#10004; Sertifikat reviewer sah' : 'Reviewer terdaftar' ?></h3>
 <p><b><?= e($RVW['name']) ?></b><br><?= e($RVW['institution']) ?></p>
