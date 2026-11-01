@@ -113,8 +113,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare("UPDATE registrations SET pay_status=?,paper_status=?,admin_note=? WHERE id=?")->execute([$ps, $pp, $note, $id]);
         $pdo->prepare("UPDATE users SET status=? WHERE id=?")->execute([['unpaid' => 'pending', 'pending' => 'pending', 'verified' => 'confirmed', 'rejected' => 'rejected'][$ps], $old['user_id']]);
         $nm = trim(($old['prefix'] === 'Other' ? '' : $old['prefix']) . ' ' . $old['full_name']); $sent = [];
-        if ($ps !== $old['pay_status'] && in_array($ps, ['verified', 'rejected'], true)) notifyUser($old['user_id'], $ps === 'verified' ? 'Pembayaran ' . no('R', $id) . ' terverifikasi. Kwitansi, e-ticket & surat undangan tersedia.' : 'Bukti bayar ' . no('R', $id) . ' ditolak. Lihat catatan panitia.', 'dashboard.php');
-        if ($old['article_title'] && $pp !== $old['paper_status'] && in_array($pp, ['revision', 'accepted', 'rejected'], true)) notifyUser($old['user_id'], 'Keputusan naskah ' . no('R', $id) . ': ' . lbl($PAPER, $pp) . '. Lihat komentar reviewer.', 'dashboard.php#paper');
+        if ($ps !== $old['pay_status'] && in_array($ps, ['verified', 'rejected'], true)) notifyUser($old['user_id'], $ps === 'verified' ? 'Pembayaran ' . no('R', $id) . ' terverifikasi. Kwitansi, e-ticket & surat undangan tersedia.' : 'Bukti bayar ' . no('R', $id) . ' ditolak. Lihat catatan panitia.', 'dashboard.php', $ps === 'verified' ? 'Payment ' . no('R', $id) . ' verified. Your receipt, e-ticket & invitation letter are available.' : 'Proof of payment ' . no('R', $id) . ' was rejected. See the committee note.');
+        if ($old['article_title'] && $pp !== $old['paper_status'] && in_array($pp, ['revision', 'accepted', 'rejected'], true)) notifyUser($old['user_id'], 'Keputusan naskah ' . no('R', $id) . ': ' . ['revision' => 'Perlu revisi', 'accepted' => 'Diterima', 'rejected' => 'Ditolak'][$pp] . '. Lihat komentar reviewer.', 'dashboard.php#paper', 'Paper decision ' . no('R', $id) . ': ' . ['revision' => 'Revision required', 'accepted' => 'Accepted', 'rejected' => 'Rejected'][$pp] . '. See the reviewers\' comments.');
         if (!empty($_POST['notify'])) {
             $nt = $note !== '' ? "\n\nNote from the committee:\n$note" : '';
             if ($ps !== $old['pay_status'] && $ps === 'verified') $sent[] = notify($old['email'], $nm, 'Payment verified', "Your payment for registration " . no('R', $id) . " has been verified. Your receipt, e-ticket (QR code for check-in), and invitation letter are now available in your dashboard." . ($old['attendance'] === 'Online' && setting('online_link') ? "\n\nThe online meeting link is available in your dashboard." : '') . $nt);
@@ -135,7 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $due = preg_match('/^\d{4}-\d{2}-\d{2}$/', post('due')) ? post('due') : date('Y-m-d', strtotime('+' . max(1, (int)setting('review_days', '14')) . ' days'));
         $pdo->prepare("INSERT IGNORE INTO reviews(reg_id,reviewer_id,round,due_date) VALUES(?,?,?,?)")->execute([$id, $rid, $pr['review_round'], $due]);
         $pdo->prepare("UPDATE registrations SET paper_status='under_review' WHERE id=? AND paper_status='submitted'")->execute([$id]);
-        notifyUser($rid, 'Permintaan review ' . no('R', $id) . ' (ronde ' . $pr['review_round'] . '), tenggat ' . fdate($due), 'reviewer.php?id=' . $id);
+        notifyUser($rid, 'Permintaan review ' . no('R', $id) . ' (ronde ' . $pr['review_round'] . '), tenggat ' . fdate($due), 'reviewer.php?id=' . $id, 'Review request ' . no('R', $id) . ' (round ' . $pr['review_round'] . '), due ' . fdateEn($due));
         $ok = notify($rv['email'], $rv['name'], 'Review request ' . no('R', $id), "You have been assigned to review the paper \"" . $pr['article_title'] . "\" (" . no('R', $id) . ", round " . $pr['review_round'] . ").\n\nPlease submit your review by " . fdateEn($due) . ". You may write comments directly in the manuscript file (Word comments / track changes) and upload it with your review.\n\n" . absUrl('reviewer.php?id=' . $id));
         $msg = 'Reviewer ditugaskan' . ($ok ? ' dan diberi tahu via email.' : ' (email notifikasi gagal terkirim).'); break;
     case 'unassign':
@@ -209,6 +209,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         setSetting('backup_auto', empty($_POST['backup_auto']) ? '0' : '1');
         setSetting('backup_keep', (string)max(1, min(365, (int)($_POST['backup_keep'] ?? 14))));
         $msg = 'Pengaturan backup disimpan.'; break;
+    case 'trrun': case 'trforce':
+        $back = '?p=terjemahan'; $r = translateMissing(45, $a === 'trforce'); if ($a === 'trforce') translationsPrune();
+        $msg = 'Diterjemahkan: ' . $r['done'] . ' teks.' . ($r['left'] ? ' Tersisa ' . $r['left'] . ' teks — klik lagi untuk melanjutkan.' : '') . ($r['error'] ? ' Error: ' . $r['error'] : ''); break;
+    case 'trkey':
+        $back = '?p=terjemahan'; setSetting('translate_key', post('translate_key'));
+        $msg = post('translate_key') !== '' ? 'API key Google Cloud Translation disimpan.' : 'API key dihapus; memakai endpoint gratis.'; break;
+    case 'trauto':
+        $back = '?p=terjemahan'; setSetting('auto_translate', setting('auto_translate', '1') === '1' ? '0' : '1');
+        $msg = 'Terjemahan otomatis ' . (setting('auto_translate') === '1' ? 'diaktifkan.' : 'dinonaktifkan.'); break;
+    case 'trsave':
+        $back = '?p=terjemahan' . (isset($_GET['pg']) ? '&pg=' . (int)$_GET['pg'] : ''); $h = post('h'); $src = (string)($_POST['src'] ?? '');
+        if (!preg_match('/^[a-f0-9]{32}$/', $h) || trKey($src) !== $h) { $msg = 'Data tidak valid.'; break; }
+        $put = $pdo->prepare("INSERT INTO translations(h,lang,src,txt,src_lang,manual) VALUES(?,?,?,?,'',1) ON DUPLICATE KEY UPDATE txt=VALUES(txt),manual=1");
+        foreach (['en', 'id'] as $l) if (trim((string)($_POST[$l] ?? '')) !== '') $put->execute([$h, $l, trim($src), trim((string)$_POST[$l])]);
+        $msg = 'Koreksi terjemahan disimpan.'; break;
     case 'mailtest':
         $back = '?p=setting#uji-email'; $to = strtolower(post('to')) ?: $u['email'];
         $ok = sendMail($to, '[' . brand() . '] Test email', "This is a test email from " . setting('name') . ".\n\nSent: " . date('Y-m-d H:i:s') . " (" . setting('timezone', 'Asia/Jakarta') . ")\nProvider: " . (resendOn() ? 'Resend API' : 'PHP mail()') . "\nFrom: " . mailFrom()[0] . "\n\nIf you received this, email notifications are working.\n" . absUrl(), $err);
@@ -235,10 +250,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!empty($_FILES['logo']['name'])) { $er = ''; $fn = upImage($_FILES['logo'], $er, 'logo'); if ($fn) { rmImage(setting('logo_url')); setSetting('logo_url', $fn); } else $msg = $er; }
         $msg = $msg ?? 'Pengaturan disimpan.'; break;
     }
+    if (in_array($a, ['set', 'itemsave', 'spadd', 'spedit', 'agenda', 'agedit'], true) && setting('auto_translate', '1') === '1') {
+        $tr = translateMissing(12);
+        $msg = ($msg ?? 'Perubahan disimpan.') . ($tr['done'] ? ' Terjemahan otomatis: ' . $tr['done'] . ' teks.' : '') . ($tr['left'] ? ' ' . $tr['left'] . ' teks belum diterjemahkan' . ($tr['error'] ? ' (' . $tr['error'] . ')' : '') . ' — lihat tab Terjemahan.' : '');
+    }
     flash($msg ?? 'Perubahan disimpan.'); go($back ?? '?p=' . $p . (isset($_GET['k']) ? '&k=' . urlencode($_GET['k']) : ''));
 }
 
-$TABS = ['ringkasan' => 'Ringkasan', 'peserta' => 'Peserta', 'naskah' => 'Naskah & Review', 'pengguna' => 'Akun', 'pembicara' => 'Pembicara', 'konten' => 'Konten', 'agenda' => 'Agenda', 'jurnal' => 'Jurnal', 'email' => 'Email', 'setting' => 'Pengaturan', 'sistem' => 'Sistem'];
+$TABS = ['ringkasan' => 'Ringkasan', 'peserta' => 'Peserta', 'naskah' => 'Naskah & Review', 'pengguna' => 'Akun', 'pembicara' => 'Pembicara', 'konten' => 'Konten', 'agenda' => 'Agenda', 'jurnal' => 'Jurnal', 'email' => 'Email', 'setting' => 'Pengaturan', 'terjemahan' => 'Terjemahan', 'sistem' => 'Sistem'];
 head('Admin'); ?>
 <h2>Panel Admin</h2><div class="tabs"><?php foreach ($TABS as $k => $l): ?><a href="?p=<?= $k ?>" class="<?= $p === $k || ($k === 'peserta' && $p === 'detail') || ($k === 'pengguna' && $p === 'edit') ? 'on' : '' ?>"><?= e($l) ?></a><?php endforeach; ?><a href="../checkin.php">Check-in</a></div>
 <?php if ($autoBackup && empty($autoBackup['ok'])): ?><p class="msg err">Backup otomatis gagal: <?= e($autoBackup['msg'] ?? '') ?> &middot; <a href="?p=sistem#backup">lihat Sistem</a></p><?php elseif ($autoBackup): ?><p class="msg">Backup otomatis harian dibuat: <?= e($autoBackup['file']) ?></p><?php endif; ?>

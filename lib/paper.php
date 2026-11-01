@@ -48,10 +48,11 @@ function reviewsOf($rid, $round = null, $reviewer = null)
 }
 
 /* ---------- notifikasi di aplikasi ---------- */
-function notifyUser($uid, $msg, $link = '')
+/** $msg dalam bahasa Indonesia; $msgEn (opsional) ditampilkan bila pengguna memakai bahasa Inggris. */
+function notifyUser($uid, $msg, $link = '', $msgEn = null)
 {
     global $pdo;
-    try { $pdo->prepare("INSERT INTO notifications(user_id,msg,link) VALUES(?,?,?)")->execute([$uid, mb_substr($msg, 0, 300), $link]); } catch (Exception $x) {}
+    try { $pdo->prepare("INSERT INTO notifications(user_id,msg,link,msg_en) VALUES(?,?,?,?)")->execute([$uid, mb_substr($msg, 0, 300), $link, $msgEn !== null ? mb_substr($msgEn, 0, 300) : null]); } catch (Exception $x) {}
 }
 function notifyAdmins($msg, $link = '')
 {
@@ -78,30 +79,30 @@ function paperHistory($R, $view, $reviewerId = null)
     $byRound = [];
     foreach ($files as $f) if ($f['kind'] !== 'camera') $byRound[(int)$f['round']]['files'][] = $f;
     foreach ($rv as $v) $byRound[(int)$v['round']]['reviews'][] = $v;
-    if (!$byRound) { echo '<p><small>Belum ada berkas naskah.</small></p>'; return; }
+    if (!$byRound) { echo '<p><small>' . te('No paper files yet.') . '</small></p>'; return; }
     krsort($byRound);
     $latest = 0; foreach ($files as $f) if ($f['kind'] !== 'camera') $latest = max($latest, (int)$f['id']);
     echo '<div class="history">';
     foreach ($byRound as $r => $d) {
-        echo '<div class="round"><h4>Ronde ' . (int)$r . ($r === $cur ? ' <span class="tag on">aktif</span>' : '') . '</h4>';
+        echo '<div class="round"><h4>' . te('Round %d', (int)$r) . ($r === $cur ? ' <span class="tag on">' . te('active') . '</span>' : '') . '</h4>';
         foreach ($d['files'] ?? [] as $f) {
             echo '<div class="hv"><span class="vtag">v' . (int)$f['version'] . '</span> <a href="' . $base . 'file.php?pf=' . (int)$f['id'] . '">' . e($view === 'reviewer' ? 'naskah-' . no('R', $R['id']) . '-v' . $f['version'] . '.' . pathinfo($f['file'], PATHINFO_EXTENSION) : $f['name']) . '</a>'
-                . ' <small>' . e($f['kind'] === 'revision' ? 'revisi' : 'naskah awal') . ' &middot; ' . e(date('d M Y H:i', strtotime($f['created_at']))) . '</small>' . ((int)$f['id'] === $latest ? ' <span class="tag">terbaru</span>' : '');
-            if ($f['note'] !== null && $f['note'] !== '') echo '<div class="note"><small>Tanggapan penulis untuk reviewer:</small><br>' . nl2br(e($f['note'])) . '</div>';
+                . ' <small>' . e($f['kind'] === 'revision' ? t('revision') : t('initial submission')) . ' &middot; ' . e(date('d M Y H:i', strtotime($f['created_at']))) . '</small>' . ((int)$f['id'] === $latest ? ' <span class="tag">' . te('latest') . '</span>' : '');
+            if ($f['note'] !== null && $f['note'] !== '') echo '<div class="note"><small>' . te('Author\'s response to reviewers') . ':</small><br>' . nl2br(e($f['note'])) . '</div>';
             echo '</div>';
         }
         $list = $d['reviews'] ?? [];
         if ($view === 'author') $list = ($r < $cur || $decided) ? array_values(array_filter($list, function ($v) { return $v['submitted_at']; })) : [];
         foreach ($list as $i => $v) {
-            $who = $view === 'admin' ? e($v['name']) : ($view === 'author' ? 'Reviewer ' . ($i + 1) : 'Review Anda');
+            $who = $view === 'admin' ? e($v['name']) : ($view === 'author' ? 'Reviewer ' . ($i + 1) : te('Your review'));
             echo '<div class="review"><b>' . $who . '</b> ';
-            if (!$v['submitted_at']) echo '<span class="badge pending">Belum mereview</span>' . ($v['due_date'] ? ' <small>tenggat ' . e(fdate($v['due_date'])) . ($v['due_date'] < date('Y-m-d') ? ' <span class="tag spam">terlambat</span>' : '') . '</small>' : '');
+            if (!$v['submitted_at']) echo '<span class="badge pending">' . te('Not reviewed yet') . '</span>' . ($v['due_date'] ? ' <small>' . te('due') . ' ' . e(fdateL($v['due_date'])) . ($v['due_date'] < date('Y-m-d') ? ' <span class="tag spam">' . te('overdue') . '</span>' : '') . '</small>' : '');
             else {
-                if ($view !== 'author') echo '&middot; Skor <b>' . (int)$v['score'] . '/5</b> &middot; ';
+                if ($view !== 'author') echo '&middot; ' . te('Score') . ' <b>' . (int)$v['score'] . '/5</b> &middot; ';
                 echo '<span class="badge">' . e(lbl($REC, $v['recommendation'])) . '</span> <small>' . e(date('d M Y', strtotime($v['submitted_at']))) . '</small>';
                 echo '<p>' . nl2br(e($v['to_author'])) . '</p>';
-                if ($v['file']) echo '<p class="att"><svg class="ic" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg> <a href="' . $base . 'file.php?rv=' . (int)$v['id'] . '">Unduh file berisi komentar reviewer</a></p>';
-                if ($view === 'admin' && $v['to_committee']) echo '<p><small>Rahasia untuk panitia:</small><br>' . nl2br(e($v['to_committee'])) . '</p>';
+                if ($v['file']) echo '<p class="att"><svg class="ic" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg> <a href="' . $base . 'file.php?rv=' . (int)$v['id'] . '">' . te('Download file with reviewer comments') . '</a></p>';
+                if ($view === 'admin' && $v['to_committee']) echo '<p><small>' . te('Confidential to the committee') . ':</small><br>' . nl2br(e($v['to_committee'])) . '</p>';
             }
             echo '</div>';
         }

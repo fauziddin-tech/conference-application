@@ -232,3 +232,8 @@ pre.cmd{background:var(--deep);color:#f1e9d8;padding:10px 12px;border-radius:8px
 .docm iframe{flex:1;width:100%;border:0;background:#e9e6df}
 .previews{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.previews .btn{padding:8px 14px;font-size:.9rem}
 .certbox{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+/* ===== v7: dwibahasa ===== */
+.langsw{display:inline-flex;margin-left:14px;border:1px solid #ffffff40;border-radius:99px;overflow:hidden;font:700 .78rem system-ui,sans-serif}
+nav .langsw a{margin:0;padding:4px 10px;color:var(--sand);letter-spacing:.04em}nav .langsw a.on{background:var(--tan);color:var(--deep)}nav .langsw a:not(.on):hover{background:#ffffff1a}
+@media(max-width:1100px){.langsw{margin:8px 0 4px}nav .links .langsw a{margin:0}}
+.trrow{margin-bottom:12px}.trrow .src{background:var(--bg);border:1px dashed var(--line);border-radius:8px;padding:8px 10px;margin-top:4px;font-size:.92rem}

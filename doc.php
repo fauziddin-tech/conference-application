@@ -62,7 +62,7 @@ if ($t === 'spcert' || $t === 'cmcert' || $t === 'mdcert') {
     $back = $u['role'] === 'admin' ? ($preview ? 'admin/?p=setting#sertifikat' : 'admin/?p=detail&id=' . $R['id']) : 'dashboard.php';
 }
 $today = fdateEn(date('Y-m-d'));
-function letterhead() { ?><header class="lh"><?php if (setting('logo_url')): ?><img src="<?= e(imgSrc(setting('logo_url'))) ?>" alt=""><?php endif; ?><div><b><?= e(setting('name')) ?></b><?php if (setting('organizer')): ?><br><?= e(setting('organizer')) ?><?php endif; ?><br><small><?= e(setting('secretariat')) ?><?= setting('email') ? ' · ' . e(setting('email')) : '' ?><?= setting('website') ? ' · ' . e(setting('website')) : '' ?></small></div></header><?php }
+function letterhead() { ?><header class="lh"><?php if (setting('logo_url')): ?><img src="<?= e(imgSrc(setting('logo_url'))) ?>" alt=""><?php endif; ?><div><b><?= e(setting('name')) ?></b><?php if (setting('organizer')): ?><br><?= e(tx(setting('organizer'), 'en')) ?><?php endif; ?><br><small><?= e(tx(setting('secretariat'), 'en')) ?><?= setting('email') ? ' · ' . e(setting('email')) : '' ?><?= setting('website') ? ' · ' . e(setting('website')) : '' ?></small></div></header><?php }
 function sign($s, $date = true) { ?><div class="sign"><?php if ($date): ?><p><?= e(fdateEn(date('Y-m-d'))) ?></p><?php endif; ?><p><?= e($s[1] ?? '') ?>,</p><div class="sp"></div><p><b><u><?= e($s[0] ?? '') ?></u></b></p></div><?php }
 ?><!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?= e($titles[$t] . ' ' . $ref . ' - ' . brand()) ?></title>
 <style>
@@ -110,11 +110,11 @@ body.embed .bar{display:none}body.embed .page{margin:12px auto}
 <td class="right"><span class="stamp <?= $paid ? 'paid' : 'unpaid' ?>"><?= $paid ? 'PAID' : 'UNPAID' ?></span></td></tr></table>
 <p><b>Billed to:</b><br><?= e($name) ?><br><?= e($P['institution']) ?><br><?= e($R['country']) ?><br><?= e($P['email']) ?> &middot; <?= e($R['phone']) ?></p>
 <table><tr><th>#</th><th>Description</th><th class="right">Amount</th></tr>
-<tr><td>1</td><td>Registration fee &ndash; <?= e(setting('name')) ?><br><small>Category: <?= e($R['category']) ?> (<?= e($R['attendance']) ?>)<?= $pres ? '<br>Paper: ' . e($R['article_title']) : '' ?></small></td><td class="right"><?= e($R['pay_amount']) ?></td></tr>
+<tr><td>1</td><td>Registration fee &ndash; <?= e(setting('name')) ?><br><small>Category: <?= e(tx($R['category'], 'en')) ?> (<?= e($R['attendance']) ?>)<?= $pres ? '<br>Paper: ' . e($R['article_title']) : '' ?></small></td><td class="right"><?= e($R['pay_amount']) ?></td></tr>
 <tr><th colspan="2" class="right">TOTAL</th><th class="right"><?= e($R['pay_amount']) ?></th></tr></table>
 <?php if ($t === 'receipt'): ?><p>Received from <b><?= e($R['pay_sender'] ?: $name) ?></b> on <?= e(fdateEn($R['pay_date'])) ?> as full payment of the registration fee above.</p>
-<?php elseif (setting('payment_info')): ?><p><b>Payment instructions</b><br><?= nl2br(e(setting('payment_info'))) ?></p><p class="small">Please write <b><?= e($ref) ?></b> in the transfer description and upload the proof of payment in your dashboard.</p><?php endif; ?>
-<?php if (setting('invoice_note')): ?><p class="small"><?= nl2br(e(setting('invoice_note'))) ?></p><?php endif; ?>
+<?php elseif (setting('payment_info')): ?><p><b>Payment instructions</b><br><?= nl2br(e(tx(setting('payment_info'), 'en'))) ?></p><p class="small">Please write <b><?= e($ref) ?></b> in the transfer description and upload the proof of payment in your dashboard.</p><?php endif; ?>
+<?php if (setting('invoice_note')): ?><p class="small"><?= nl2br(e(tx(setting('invoice_note'), 'en'))) ?></p><?php endif; ?>
 <?php if ($t === 'receipt') sign([setting('organizer') ?: $s1[0], 'Treasurer, Organizing Committee'], true); ?>
 <p class="small">This document is generated electronically. Verify at <?= e($verifyUrl) ?></p></div>
 
@@ -128,7 +128,7 @@ body.embed .bar{display:none}body.embed .page{margin:12px auto}
 <p>Dear <?= e($name) ?>,</p>
 <p>On behalf of the Organizing and Scientific Committee, we are pleased to inform you that your paper entitled:</p>
 <p style="text-align:center;font-size:1.1rem"><b>&ldquo;<?= e($R['article_title']) ?>&rdquo;</b></p>
-<p>(Paper ID: <?= e($ref) ?><?= $R['track'] ? ', Track: ' . e($R['track']) : '' ?>) has been <b>ACCEPTED</b> for presentation at the <b><?= e(setting('name')) ?></b>, to be held on <?= e(setting('date')) ?> at <?= e(setting('location')) ?><?= $R['attendance'] === 'Online' ? ' (online presentation)' : '' ?>.</p>
+<p>(Paper ID: <?= e($ref) ?><?= $R['track'] ? ', Track: ' . e($R['track']) : '' ?>) has been <b>ACCEPTED</b> for presentation at the <b><?= e(setting('name')) ?></b>, to be held on <?= e(tx(setting('date'), 'en')) ?> at <?= e(setting('location')) ?><?= $R['attendance'] === 'Online' ? ' (online presentation)' : '' ?>.</p>
 <p>Please make sure that the registration fee has been paid and that the final (camera-ready) version of your manuscript, prepared according to the author guidelines and reviewers' comments, is uploaded through your participant dashboard.</p>
 <p>Congratulations, and we look forward to your presentation.</p>
 <?php sign($s1, false); ?>
@@ -141,8 +141,8 @@ body.embed .bar{display:none}body.embed .page{margin:12px auto}
 <h1 style="text-align:center;margin:24px 0">LETTER OF INVITATION</h1>
 <p>To whom it may concern,</p>
 <p>The Organizing Committee of the <b><?= e(setting('name')) ?></b> is pleased to invite:</p>
-<table class="meta" style="margin-left:24px"><tr><td>Name</td><td>: <b><?= e($name) ?></b></td></tr><tr><td>Institution</td><td>: <?= e($P['institution']) ?></td></tr><tr><td>Country</td><td>: <?= e($R['country']) ?></td></tr><tr><td>Participation</td><td>: <?= e($R['category']) ?> (<?= e($R['attendance']) ?>)</td></tr><tr><td>Registration No.</td><td>: <?= e($ref) ?></td></tr></table>
-<p>to attend the conference, which will take place on <b><?= e(setting('date')) ?></b> at <b><?= e(setting('location')) ?></b>.<?= $pres ? ' The participant will present the paper entitled &ldquo;' . e($R['article_title']) . '&rdquo;.' : '' ?></p>
+<table class="meta" style="margin-left:24px"><tr><td>Name</td><td>: <b><?= e($name) ?></b></td></tr><tr><td>Institution</td><td>: <?= e($P['institution']) ?></td></tr><tr><td>Country</td><td>: <?= e($R['country']) ?></td></tr><tr><td>Participation</td><td>: <?= e(tx($R['category'], 'en')) ?> (<?= e($R['attendance']) ?>)</td></tr><tr><td>Registration No.</td><td>: <?= e($ref) ?></td></tr></table>
+<p>to attend the conference, which will take place on <b><?= e(tx(setting('date'), 'en')) ?></b> at <b><?= e(setting('location')) ?></b>.<?= $pres ? ' The participant will present the paper entitled &ldquo;' . e($R['article_title']) . '&rdquo;.' : '' ?></p>
 <p>The participant has completed registration and payment of the conference fee. This letter is issued for visa application, travel, or institutional permission purposes. Travel, accommodation, and living expenses are the responsibility of the participant unless otherwise stated.</p>
 <p>Should you require further information, please contact the committee at <?= e(setting('email')) ?>.</p>
 <?php sign($s1, false); ?>
@@ -150,8 +150,8 @@ body.embed .bar{display:none}body.embed .page{margin:12px auto}
 
 <?php elseif ($t === 'badge'): ?>
 <div class="page"><h1>E-Ticket</h1><p>Tunjukkan QR code ini di meja registrasi untuk check-in. Cetak badge di bawah (potong mengikuti garis) atau simpan di ponsel.</p>
-<table class="meta"><tr><td>Registration No.</td><td>: <b><?= e($ref) ?></b></td></tr><tr><td>Ticket code</td><td>: <b><?= e($R['ticket']) ?></b></td></tr><tr><td>Event</td><td>: <?= e(setting('date')) ?> &middot; <?= e(setting('time')) ?> &middot; <?= e(setting('location')) ?></td></tr><tr><td>Attendance</td><td>: <?= e($R['attendance']) ?></td></tr></table>
-<div class="badges"><div class="badge"><div class="top"><?= e(brand()) ?><br><small><?= e(setting('date')) ?></small></div>
+<table class="meta"><tr><td>Registration No.</td><td>: <b><?= e($ref) ?></b></td></tr><tr><td>Ticket code</td><td>: <b><?= e($R['ticket']) ?></b></td></tr><tr><td>Event</td><td>: <?= e(tx(setting('date'), 'en')) ?> &middot; <?= e(tx(setting('time'), 'en')) ?> &middot; <?= e(setting('location')) ?></td></tr><tr><td>Attendance</td><td>: <?= e($R['attendance']) ?></td></tr></table>
+<div class="badges"><div class="badge"><div class="top"><?= e(brand()) ?><br><small><?= e(tx(setting('date'), 'en')) ?></small></div>
 <div class="nm"><?= e($name) ?></div><div class="af"><?= e($P['institution']) ?><br><?= e($R['country']) ?></div>
 <div class="qr" data-qr="<?= e(absUrl('checkin.php?c=' . $R['ticket'])) ?>"></div><div class="small"><?= e($ref) ?> &middot; <?= e($R['ticket']) ?></div>
 <div class="cat"><?= e($pres ? 'Presenter' : (stripos($R['category'], 'participant') !== false ? 'Participant' : $R['category'])) ?></div></div></div></div>
@@ -160,7 +160,7 @@ body.embed .bar{display:none}body.embed .page{margin:12px auto}
 <div class="page cert"><div class="frame"><?php if (setting('logo_url')): ?><img class="lg" src="<?= e(imgSrc(setting('logo_url'))) ?>" alt=""><?php endif; ?>
 <h1>CERTIFICATE</h1><h2>of <?= $role === 'Presenter' ? 'Presentation' : 'Participation' ?></h2>
 <p>This is to certify that</p><div class="who"><?= e($name) ?></div><p><?= e($P['institution']) ?></p>
-<p style="max-width:200mm">has <?= $role === 'Presenter' ? 'presented the paper entitled <b>&ldquo;' . e($R['article_title']) . '&rdquo;</b>' : 'participated' ?> as a <b><?= $role ?></b><?= $R['attendance'] === 'Online' ? ' (online)' : '' ?> in the<br><b><?= e(setting('name')) ?></b><br><?= e(setting('tagline')) ?><br>held on <?= e(setting('date')) ?> at <?= e(setting('location')) ?>.</p>
+<p style="max-width:200mm">has <?= $role === 'Presenter' ? 'presented the paper entitled <b>&ldquo;' . e($R['article_title']) . '&rdquo;</b>' : 'participated' ?> as a <b><?= $role ?></b><?= $R['attendance'] === 'Online' ? ' (online)' : '' ?> in the<br><b><?= e(setting('name')) ?></b><br><?= e(setting('tagline')) ?><br>held on <?= e(tx(setting('date'), 'en')) ?> at <?= e(setting('location')) ?>.</p>
 <div class="signs"><?php foreach (array_slice($signers ?: [$s1], 0, 3) as $s): ?><div><p><?= e($s[1] ?? '') ?></p><div class="sp"></div><p><b><u><?= e($s[0]) ?></u></b></p></div><?php endforeach; ?></div>
 <div class="qr" data-qr="<?= e($verifyUrl) ?>"></div><div class="no">No. CERT/<?= e(brand()) ?>/<?= e($ref) ?><br>Verify: <?= e($verifyUrl) ?></div></div></div>
 
@@ -168,7 +168,7 @@ body.embed .bar{display:none}body.embed .page{margin:12px auto}
 <div class="page cert"><div class="frame"><?php if (setting('logo_url')): ?><img class="lg" src="<?= e(imgSrc(setting('logo_url'))) ?>" alt=""><?php endif; ?>
 <h1>CERTIFICATE</h1><h2>of Appreciation</h2>
 <p>This certificate is proudly presented to</p><div class="who"><?= e($name) ?></div><p><?= e($RV['institution']) ?></p>
-<p class="award">in recognition of the valuable contribution as a <b>Reviewer</b><?= $nrev ? ', having reviewed <b>' . $nrev . ' manuscript' . ($nrev > 1 ? 's' : '') . '</b>' : '' ?>, for the<br><b><?= e(setting('name')) ?></b><br><?= e(setting('tagline')) ?><br>held on <?= e(setting('date')) ?> at <?= e(setting('location')) ?>.</p>
+<p class="award">in recognition of the valuable contribution as a <b>Reviewer</b><?= $nrev ? ', having reviewed <b>' . $nrev . ' manuscript' . ($nrev > 1 ? 's' : '') . '</b>' : '' ?>, for the<br><b><?= e(setting('name')) ?></b><br><?= e(setting('tagline')) ?><br>held on <?= e(tx(setting('date'), 'en')) ?> at <?= e(setting('location')) ?>.</p>
 <div class="signs"><?php foreach (array_slice($signers ?: [$s1], 0, 3) as $s): ?><div><p><?= e($s[1] ?? '') ?></p><div class="sp"></div><p><b><u><?= e($s[0]) ?></u></b></p></div><?php endforeach; ?></div>
 <div class="qr" data-qr="<?= e($verifyUrl) ?>"></div><div class="no">No. CERT/<?= e(brand()) ?>/<?= e($ref) ?><br>Verify: <?= e($verifyUrl) ?></div></div></div>
 <?php endif; ?>
@@ -176,7 +176,7 @@ body.embed .bar{display:none}body.embed .page{margin:12px auto}
 <div class="page cert"><div class="frame"><?php if (setting('logo_url')): ?><img class="lg" src="<?= e(imgSrc(setting('logo_url'))) ?>" alt=""><?php endif; ?>
 <h1>CERTIFICATE</h1><h2>of Appreciation</h2>
 <p>This certificate is proudly presented to</p><div class="who"><?= e($cn) ?></div><p><?= e($ci) ?></p>
-<p class="award"><?= $t === 'cmcert' ? 'in recognition of the dedication and valuable contribution as' : 'in recognition of the valuable contribution as' ?> <b><?= e($cr) ?></b> <?= $t === 'cmcert' ? 'of' : 'at' ?> the<br><b><?= e(setting('name')) ?></b><br><?= e(setting('tagline')) ?><br>held on <?= e(setting('date')) ?> at <?= e(setting('location')) ?>.</p>
+<p class="award"><?= $t === 'cmcert' ? 'in recognition of the dedication and valuable contribution as' : 'in recognition of the valuable contribution as' ?> <b><?= e($cr) ?></b> <?= $t === 'cmcert' ? 'of' : 'at' ?> the<br><b><?= e(setting('name')) ?></b><br><?= e(setting('tagline')) ?><br>held on <?= e(tx(setting('date'), 'en')) ?> at <?= e(setting('location')) ?>.</p>
 <div class="signs"><?php foreach (array_slice($signers ?: [$s1], 0, 3) as $s): ?><div><p><?= e($s[1] ?? '') ?></p><div class="sp"></div><p><b><u><?= e($s[0]) ?></u></b></p></div><?php endforeach; ?></div>
 <div class="qr" data-qr="<?= e($vu) ?>"></div><div class="no">No. CERT/<?= e(brand()) ?>/<?= e($cref) ?><br>Verify: <?= e($vu) ?></div></div></div>
 <?php endforeach; endif; ?>

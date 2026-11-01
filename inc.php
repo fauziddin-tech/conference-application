@@ -7,6 +7,7 @@ require __DIR__ . '/config.php';
 require_once __DIR__ . '/lib/schema.php';
 require_once __DIR__ . '/lib/paper.php';
 require_once __DIR__ . '/lib/backup.php';
+require_once __DIR__ . '/lib/i18n.php';
 
 $HTTPS = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ($_SERVER['SERVER_PORT'] ?? '') == '443' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
 if (session_status() === PHP_SESSION_NONE) {
@@ -52,10 +53,10 @@ function absUrl($p = '') { global $HTTPS; return ($HTTPS ? 'https' : 'http') . '
 function fdate($d) { if (!$d) return ''; $t = strtotime($d); if (!$t) return $d; $m = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']; return date('j', $t) . ' ' . $m[(int)date('n', $t)] . ' ' . date('Y', $t); }
 function fdateEn($d) { $t = strtotime((string)$d); return $t ? date('F j, Y', $t) : (string)$d; }
 
-$PAY = ['unpaid' => 'Belum bayar', 'pending' => 'Menunggu verifikasi', 'verified' => 'Terverifikasi', 'rejected' => 'Ditolak'];
-$PAPER = ['submitted' => 'Diterima sistem', 'under_review' => 'Dalam review', 'revision' => 'Perlu revisi', 'accepted' => 'Diterima', 'rejected' => 'Ditolak'];
-$REC = ['accept' => 'Accept', 'minor' => 'Minor revision', 'major' => 'Major revision', 'reject' => 'Reject'];
-$ULBL = ['pending' => 'Menunggu konfirmasi', 'confirmed' => 'Terkonfirmasi', 'rejected' => 'Ditolak'];
+$PAY = ['unpaid' => t('Unpaid'), 'pending' => t('Awaiting verification'), 'verified' => t('Verified'), 'rejected' => t('Rejected')];
+$PAPER = ['submitted' => t('Submitted'), 'under_review' => t('Under review'), 'revision' => t('Revision required'), 'accepted' => t('Accepted'), 'rejected' => t('Rejected')];
+$REC = ['accept' => t('Accept'), 'minor' => t('Minor revision'), 'major' => t('Major revision'), 'reject' => t('Reject')];
+$ULBL = ['pending' => t('Awaiting confirmation'), 'confirmed' => t('Confirmed'), 'rejected' => t('Rejected')];
 
 /* ---------- pengguna & akses ---------- */
 function user()
@@ -69,7 +70,7 @@ function need($roles = null)
 {
     $u = user();
     if (!$u) { $_SESSION['back'] = $_SERVER['REQUEST_URI'] ?? ''; go(BASE . 'login.php'); }
-    if ($roles && !in_array($u['role'], (array)$roles, true)) { http_response_code(403); die('Akses ditolak'); }
+    if ($roles && !in_array($u['role'], (array)$roles, true)) { http_response_code(403); die(t('Access denied')); }
     return $u;
 }
 function homeFor($u) { return ['admin' => 'admin/', 'reviewer' => 'reviewer.php'][$u['role']] ?? 'dashboard.php'; }
@@ -152,11 +153,11 @@ function tooFast() { return time() - (int)($_SESSION['ft'] ?? 0) < 3; }
 /** Pemeriksaan pendaftaran akun; mengembalikan pesan error atau ''. */
 function spamCheck($name, $email)
 {
-    if (post('website') !== '') return 'Permintaan ditolak.';
-    if (tooFast()) return 'Formulir dikirim terlalu cepat. Tunggu beberapa detik lalu coba lagi.';
-    if (!validName($name)) return 'Nama hanya boleh berisi huruf, spasi, titik, koma, dan tanda hubung (tanpa angka, tautan, atau simbol).';
-    if (blockedEmail($email)) return 'Gunakan alamat email institusi atau email pribadi permanen (email sementara tidak diterima).';
-    if (!captchaOk()) return 'Verifikasi keamanan (captcha) gagal. Muat ulang halaman lalu coba lagi.';
+    if (post('website') !== '') return t('Request rejected.');
+    if (tooFast()) return t('The form was submitted too quickly. Wait a few seconds and try again.');
+    if (!validName($name)) return t('Names may only contain letters, spaces, periods, commas and hyphens (no numbers, links or symbols).');
+    if (blockedEmail($email)) return t('Please use an institutional or permanent personal email address (temporary emails are not accepted).');
+    if (!captchaOk()) return t('Security check (captcha) failed. Reload the page and try again.');
     return '';
 }
 
@@ -283,15 +284,15 @@ function magicOk($p, $ext)
 function upFile($f, $exts, &$err, $label, $public = false)
 {
     $err = '';
-    if (!$f || ($f['error'] ?? 4) === 4) { $err = "$label: file belum dipilih."; return null; }
-    if ($f['error'] !== 0) { $err = "$label: gagal mengunggah (file mungkin melebihi batas server)."; return null; }
-    if ($f['size'] > 10485760) { $err = "$label: ukuran maksimal 10 MB."; return null; }
+    if (!$f || ($f['error'] ?? 4) === 4) { $err = t('%s: no file selected.', $label); return null; }
+    if ($f['error'] !== 0) { $err = t('%s: upload failed (the file may exceed the server limit).', $label); return null; }
+    if ($f['size'] > 10485760) { $err = t('%s: maximum size is 10 MB.', $label); return null; }
     $ext = strtolower(pathinfo($f['name'], PATHINFO_EXTENSION));
-    if (!in_array($ext, $exts, true) || !magicOk($f['tmp_name'], $ext)) { $err = "$label: format harus " . strtoupper(implode('/', $exts)) . '.'; return null; }
+    if (!in_array($ext, $exts, true) || !magicOk($f['tmp_name'], $ext)) { $err = t('%s: the format must be %s.', $label, strtoupper(implode('/', $exts))); return null; }
     $d = __DIR__ . ($public ? '/uploads/' : '/uploads/private/');
     if (!is_dir($d)) { @mkdir($d, 0755, true); if (!$public) @file_put_contents($d . '.htaccess', "Require all denied\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n"); }
     $fn = ($public ? 'dl_' : '') . bin2hex(random_bytes(10)) . '.' . $ext;
-    if (!move_uploaded_file($f['tmp_name'], $d . $fn)) { $err = "$label: gagal menyimpan (cek izin folder uploads)."; return null; }
+    if (!move_uploaded_file($f['tmp_name'], $d . $fn)) { $err = t('%s: could not be saved (check the uploads folder permissions).', $label); return null; }
     return [$fn, substr(basename($f['name']), 0, 190)];
 }
 function rmPriv($fn) { if ($fn) @unlink(__DIR__ . '/uploads/private/' . basename($fn)); }
@@ -329,45 +330,54 @@ function csvOut($name, $head, $rows)
 /* ---------- layout ---------- */
 function head($t, $extra = '')
 {
-    $u = user(); $H = BASE; $desc = setting('tagline') ?: setting('name');
+    $u = user(); $H = BASE; $L = lang(); $desc = setting('tagline') ?: setting('name');
     if (!$u) { formStamp(); if (captchaOn()) $extra .= '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>'; }
-    ?><!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    ?><!DOCTYPE html><html lang="<?= $L ?>"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title><?= e($t) ?> - <?= e(brand()) ?></title>
 <meta name="description" content="<?= e(mb_substr($desc, 0, 300)) ?>">
-<meta property="og:type" content="website"><meta property="og:title" content="<?= e(setting('name')) ?>"><meta property="og:description" content="<?= e(mb_substr($desc, 0, 300)) ?>"><meta property="og:url" content="<?= e(absUrl()) ?>">
+<meta property="og:type" content="website"><meta property="og:title" content="<?= e(setting('name')) ?>"><meta property="og:description" content="<?= e(mb_substr($desc, 0, 300)) ?>"><meta property="og:url" content="<?= e(absUrl()) ?>"><meta property="og:locale" content="<?= $L === 'id' ? 'id_ID' : 'en_US' ?>">
+<?php foreach (array_keys(LANGS) as $l): ?><link rel="alternate" hreflang="<?= $l ?>" href="<?= e(absUrl(ltrim(substr(langUrl($l), strlen(BASE)), '/'))) ?>"><?php endforeach; ?>
 <?php if (setting('logo_url')): ?><meta property="og:image" content="<?= e(imgSrc(setting('logo_url'))) ?>"><link rel="icon" href="<?= e(imgSrc(setting('logo_url'))) ?>"><?php endif; ?>
 <meta name="theme-color" content="#1d3a3a">
 <link rel="stylesheet" href="<?= $H ?>style.css?v=<?= @filemtime(__DIR__ . "/style.css") ?>"><?= $extra ?></head><body id="top">
-<a class="skip" href="#main">Lewati ke konten</a>
+<a class="skip" href="#main"><?= te('Skip to content') ?></a>
 <nav><a class="brand" href="<?= $H ?>"><?php if (setting('logo_url')): ?><img src="<?= e(imgSrc(setting('logo_url'))) ?>" alt=""><?php endif; ?><?= e(brand()) ?></a><button class="burger" type="button" aria-label="Menu" aria-expanded="false" onclick="var n=this.parentNode;n.classList.toggle('open');this.setAttribute('aria-expanded',n.classList.contains('open'))">&#9776;</button><div class="links">
-<a href="<?= $H ?>#about">About</a><a href="<?= $H ?>#speakers">Speakers</a><a href="<?= $H ?>#cfp">Call for Papers</a><a href="<?= $H ?>#program">Program</a><a href="<?= $H ?>#register">Registration</a><a href="<?= $H ?>#venue">Venue</a><?php if (setting('journals')): ?><a href="<?= $H ?>#publication">Publication</a><?php endif; ?><a href="<?= $H ?>#contact">Contact</a><?php if (setting('submission_url')): ?><a href="<?= e(setting('submission_url')) ?>" target="_blank" rel="noopener">Make Submission</a><?php endif; ?>
-<?php if ($u): ?><?php if ($u['role'] === 'admin'): ?><a href="<?= $H ?>admin/">Admin</a><?php elseif ($u['role'] === 'reviewer'): ?><a href="<?= $H ?>reviewer.php">Review</a><?php else: ?><a href="<?= $H ?>dashboard.php">Dashboard</a><?php endif; ?><?php $nn = unreadCount($u['id']); ?><a href="<?= $H ?>notifikasi.php" class="bell" aria-label="Notifikasi<?= $nn ? ' (' . $nn . ' belum dibaca)' : '' ?>"><svg class="ic" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="bl">Notifikasi</span><?php if ($nn): ?><b><?= $nn > 99 ? '99+' : $nn ?></b><?php endif; ?></a><a href="<?= $H ?>logout.php?t=<?= token() ?>">Keluar (<?= e(mb_strimwidth($u['name'], 0, 20, '…')) ?>)</a>
-<?php else: ?><a href="<?= $H ?>login.php">Masuk</a><a class="btn" href="<?= $H ?>register.php">Daftar</a><?php endif; ?></div></nav>
-<?php if (!$u && regOpen()): ?><div id="regm" class="modal" hidden><div class="mbox" role="dialog" aria-modal="true" aria-labelledby="regmt"><button type="button" class="mx" aria-label="Tutup" onclick="document.getElementById('regm').hidden=true">&times;</button>
-<h3 id="regmt">Buat Akun Peserta</h3><p><small>Langkah 1 dari 2. Setelah akun dibuat, Anda langsung diarahkan ke formulir pendaftaran konferensi.</small></p>
+<a href="<?= $H ?>#about"><?= te('About') ?></a><a href="<?= $H ?>#speakers"><?= te('Speakers') ?></a><a href="<?= $H ?>#cfp"><?= te('Call for Papers') ?></a><a href="<?= $H ?>#program"><?= te('Program') ?></a><a href="<?= $H ?>#register"><?= te('Registration') ?></a><a href="<?= $H ?>#venue"><?= te('Venue') ?></a><?php if (setting('journals')): ?><a href="<?= $H ?>#publication"><?= te('Publication') ?></a><?php endif; ?><a href="<?= $H ?>#contact"><?= te('Contact') ?></a><?php if (setting('submission_url')): ?><a href="<?= e(setting('submission_url')) ?>" target="_blank" rel="noopener"><?= te('Make Submission') ?></a><?php endif; ?>
+<?php if ($u): ?><?php if ($u['role'] === 'admin'): ?><a href="<?= $H ?>admin/">Admin</a><?php elseif ($u['role'] === 'reviewer'): ?><a href="<?= $H ?>reviewer.php"><?= te('Review') ?></a><?php else: ?><a href="<?= $H ?>dashboard.php"><?= te('Dashboard') ?></a><?php endif; ?><?php $nn = unreadCount($u['id']); ?><a href="<?= $H ?>notifikasi.php" class="bell" aria-label="<?= te('Notifications') ?><?= $nn ? ' (' . te('%d unread', $nn) . ')' : '' ?>"><svg class="ic" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="bl"><?= te('Notifications') ?></span><?php if ($nn): ?><b><?= $nn > 99 ? '99+' : $nn ?></b><?php endif; ?></a><a href="<?= $H ?>logout.php?t=<?= token() ?>"><?= te('Log out') ?> (<?= e(mb_strimwidth($u['name'], 0, 20, '…')) ?>)</a>
+<?php else: ?><a href="<?= $H ?>login.php"><?= te('Log in') ?></a><a class="btn" href="<?= $H ?>register.php"><?= te('Register') ?></a><?php endif; ?>
+<span class="langsw" role="group" aria-label="Language / Bahasa"><?php foreach (LANGS as $l => $n): ?><a href="<?= e(langUrl($l)) ?>" hreflang="<?= $l ?>" lang="<?= $l ?>" title="<?= e($n) ?>"<?= $l === $L ? ' class="on" aria-current="true"' : '' ?>><?= strtoupper($l) ?></a><?php endforeach; ?></span></div></nav>
+<?php if (!$u): ?><div id="logm" class="modal" hidden><div class="mbox" role="dialog" aria-modal="true" aria-labelledby="logmt"><button type="button" class="mx" aria-label="<?= te('Close') ?>" onclick="document.getElementById('logm').hidden=true">&times;</button>
+<h3 id="logmt"><?= te('Log in') ?></h3><p><small><?= te('Participants, reviewers and the committee log in here.') ?></small></p>
+<p class="msg err merr" hidden></p>
+<form method="post" action="<?= $H ?>login.php"><?= csrf() ?>
+<label><?= te('Email') ?><input type="email" name="email" required autocomplete="email"></label>
+<label><?= te('Password') ?><input type="password" name="password" required autocomplete="current-password"></label>
+<button class="btn"><?= te('Log in') ?></button><p><small><a href="<?= $H ?>forgot.php"><?= te('Forgot password?') ?></a><?php if (regOpen()): ?> &middot; <?= te('No account yet?') ?> <a href="<?= $H ?>register.php"><?= te('Register') ?></a><?php endif; ?></small></p></form></div></div><?php endif; ?>
+<?php if (!$u && regOpen()): ?><div id="regm" class="modal" hidden><div class="mbox" role="dialog" aria-modal="true" aria-labelledby="regmt"><button type="button" class="mx" aria-label="<?= te('Close') ?>" onclick="document.getElementById('regm').hidden=true">&times;</button>
+<h3 id="regmt"><?= te('Create Participant Account') ?></h3><p><small><?= te('Step 1 of 2. After creating your account you will be taken straight to the conference registration form.') ?></small></p>
 <p class="msg err merr" hidden></p>
 <form method="post" action="<?= $H ?>register.php"><?= csrf() ?>
-<label>Nama Lengkap<input name="name" required autocomplete="name"></label>
-<label>Email<input type="email" name="email" required autocomplete="email"></label>
-<label>Password (min. 8 karakter)<input type="password" name="password" required minlength="8" autocomplete="new-password"></label>
+<label><?= te('Full name') ?><input name="name" required autocomplete="name"></label>
+<label><?= te('Email') ?><input type="email" name="email" required autocomplete="email"></label>
+<label><?= te('Password (min. 8 characters)') ?><input type="password" name="password" required minlength="8" autocomplete="new-password"></label>
 <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true"><?= captchaHtml() ?>
-<button class="btn">Buat Akun &amp; Lanjutkan</button><p><small>Sudah punya akun? <a href="<?= $H ?>login.php">Masuk</a></small></p></form></div></div><?php endif; ?><main id="main">
+<button class="btn"><?= te('Create Account & Continue') ?></button><p><small><?= te('Already have an account?') ?> <a href="<?= $H ?>login.php"><?= te('Log in') ?></a></small></p></form></div></div><?php endif; ?><main id="main">
 <?php if ($f = flash()): ?><p class="msg" role="status"><?= e($f) ?></p><?php endif;
 }
 
 function foot()
 {
     $H = BASE; $em = setting('email'); ?></main><footer><div class="fgrid">
-<div><b><?= e(setting('name')) ?></b><p><?= e(setting('tagline')) ?></p><?php if (setting('organizer')): ?><p><small>Diselenggarakan oleh <?= e(setting('organizer')) ?></small></p><?php endif; ?></div>
-<div><h4>Tautan</h4><a href="<?= $H ?>#about">About</a><a href="<?= $H ?>#dates">Important Dates</a><a href="<?= $H ?>#program">Program</a><a href="<?= $H ?>#register">Registration</a><a href="<?= $H ?>#faq">FAQ</a><a href="<?= $H ?>verify.php">Verifikasi Sertifikat</a><?php if (setting('event_start')): ?><a href="<?= $H ?>calendar.php">Tambahkan ke Kalender</a><?php endif; ?></div>
-<div><h4>Kontak</h4><p><?= e(setting('secretariat')) ?></p><?php if ($em): ?><p><a href="mailto:<?= e($em) ?>"><?= e($em) ?></a></p><?php endif; ?></div></div>
-<div class="copy">&copy; <?= date('Y') ?> <?= e(setting('name')) ?></div></footer><a href="#top" class="totop" aria-label="Ke atas">&uarr;</a>
+<div><b><?= e(setting('name')) ?></b><p><?= e(setting('tagline')) ?></p><?php if (setting('organizer')): ?><p><small><?= te('Organized by') ?> <?= e(tx(setting('organizer'))) ?></small></p><?php endif; ?></div>
+<div><h4><?= te('Links') ?></h4><a href="<?= $H ?>#about"><?= te('About') ?></a><a href="<?= $H ?>#dates"><?= te('Important Dates') ?></a><a href="<?= $H ?>#program"><?= te('Program') ?></a><a href="<?= $H ?>#register"><?= te('Registration') ?></a><a href="<?= $H ?>#faq">FAQ</a><a href="<?= $H ?>verify.php"><?= te('Verify Certificate') ?></a><?php if (setting('event_start')): ?><a href="<?= $H ?>calendar.php"><?= te('Add to Calendar') ?></a><?php endif; ?></div>
+<div><h4><?= te('Contact') ?></h4><p><?= e(tx(setting('secretariat'))) ?></p><?php if ($em): ?><p><a href="mailto:<?= e($em) ?>"><?= e($em) ?></a></p><?php endif; ?></div></div>
+<div class="copy">&copy; <?= date('Y') ?> <?= e(setting('name')) ?></div></footer><a href="#top" class="totop" aria-label="<?= te('Back to top') ?>">&uarr;</a>
 <script>
 (function(){var l=document.querySelectorAll('.fade');if(!('IntersectionObserver' in window)){l.forEach(function(e){e.classList.add('in')});return}var o=new IntersectionObserver(function(a){a.forEach(function(x){if(x.isIntersecting){x.target.classList.add('in');o.unobserve(x.target)}})},{threshold:.08});l.forEach(function(e){o.observe(e)})})();
 /* tab hari pada agenda */
 document.querySelectorAll('.daytabs').forEach(function(w){var b=w.querySelectorAll('[data-day]'),p=w.querySelectorAll('.daypane');b.forEach(function(x){x.addEventListener('click',function(){b.forEach(function(y){y.classList.toggle('on',y===x);y.setAttribute('aria-selected',y===x)});p.forEach(function(q){q.hidden=q.dataset.pane!==x.dataset.day})})})});
 /* hitung mundur */
-document.querySelectorAll('[data-countdown]').forEach(function(c){var t=Date.parse(c.dataset.countdown);if(isNaN(t))return;function u(){var d=Math.max(0,t-Date.now())/1000;if(d<=0){c.innerHTML='<b>The event has started!</b>';return}var v=[Math.floor(d/86400),Math.floor(d%86400/3600),Math.floor(d%3600/60),Math.floor(d%60)];c.querySelectorAll('b').forEach(function(b,i){b.textContent=v[i]})}u();setInterval(u,1000)});
+document.querySelectorAll('[data-countdown]').forEach(function(c){var t=Date.parse(c.dataset.countdown);if(isNaN(t))return;function u(){var d=Math.max(0,t-Date.now())/1000;if(d<=0){c.innerHTML='<b>'+<?= json_encode(t('The event has started!')) ?>+'</b>';return}var v=[Math.floor(d/86400),Math.floor(d%86400/3600),Math.floor(d%3600/60),Math.floor(d%60)];c.querySelectorAll('b').forEach(function(b,i){b.textContent=v[i]})}u();setInterval(u,1000)});
 </script>
 <script>(function(){var m=document.getElementById('regm');if(!m)return;
 var op=function(e){if(/register\.php$/.test(location.pathname))return;e.preventDefault();m.hidden=false;var i=m.querySelector('input[name=name]');if(i)i.focus()};
@@ -376,12 +386,20 @@ m.addEventListener('click',function(e){if(e.target===m)m.hidden=true});
 document.addEventListener('keydown',function(e){if(e.key==='Escape')m.hidden=true});
 var f=m.querySelector('form'),er=m.querySelector('.merr');
 f.addEventListener('submit',function(e){e.preventDefault();er.hidden=true;var b=f.querySelector('button.btn');b.disabled=true;
-fetch(f.action,{method:'POST',body:new FormData(f),headers:{'X-Requested-With':'fetch'},credentials:'same-origin'}).then(function(r){return r.json()}).then(function(j){if(j.ok){location.href=j.to}else{er.textContent=j.error||'Gagal membuat akun.';er.hidden=false;b.disabled=false;if(window.turnstile)turnstile.reset()}}).catch(function(){er.textContent='Terjadi kesalahan. Muat ulang halaman lalu coba lagi.';er.hidden=false;b.disabled=false})})})();</script>
+fetch(f.action,{method:'POST',body:new FormData(f),headers:{'X-Requested-With':'fetch'},credentials:'same-origin'}).then(function(r){return r.json()}).then(function(j){if(j.ok){location.href=j.to}else{er.textContent=j.error||<?= json_encode(t('Could not create the account.')) ?>;er.hidden=false;b.disabled=false;if(window.turnstile)turnstile.reset()}}).catch(function(){er.textContent=<?= json_encode(t('Something went wrong. Reload the page and try again.')) ?>;er.hidden=false;b.disabled=false})})})();</script>
+<script>(function(){var m=document.getElementById('logm');if(!m)return;var r=document.getElementById('regm');
+function show(e){if(/login\.php$/.test(location.pathname))return;e.preventDefault();if(r)r.hidden=true;m.hidden=false;var i=m.querySelector('input[name=email]');if(i)i.focus()}
+document.querySelectorAll('a[href$="login.php"]').forEach(function(a){a.addEventListener('click',show)});
+document.querySelectorAll('a[href$="register.php"]').forEach(function(a){a.addEventListener('click',function(){m.hidden=true})});
+m.addEventListener('click',function(e){if(e.target===m)m.hidden=true});document.addEventListener('keydown',function(e){if(e.key==='Escape')m.hidden=true});
+var f=m.querySelector('form'),er=m.querySelector('.merr');
+f.addEventListener('submit',function(e){e.preventDefault();er.hidden=true;var b=f.querySelector('button.btn');b.disabled=true;
+fetch(f.action,{method:'POST',body:new FormData(f),headers:{'X-Requested-With':'fetch'},credentials:'same-origin'}).then(function(x){return x.json()}).then(function(j){if(j.ok){location.href=j.to}else{er.textContent=j.error||<?= json_encode(t('Log in failed.')) ?>;er.hidden=false;b.disabled=false}}).catch(function(){er.textContent=<?= json_encode(t('Something went wrong. Reload the page and try again.')) ?>;er.hidden=false;b.disabled=false})})})();</script>
 <div id="docm" class="modal docm" hidden><div class="dbox" role="dialog" aria-modal="true" aria-labelledby="docmt">
-<div class="dbar"><b id="docmt">Pratinjau</b><span><button type="button" class="btn" id="docmp">Cetak / Simpan PDF</button> <a class="btn ghost2" id="docmo" href="#" target="_blank" rel="noopener">Buka di tab baru</a> <button type="button" class="mx" id="docmx" aria-label="Tutup">&times;</button></span></div>
-<iframe id="docmf" title="Pratinjau dokumen" src="about:blank"></iframe></div></div>
+<div class="dbar"><b id="docmt"><?= te('Preview') ?></b><span><button type="button" class="btn" id="docmp"><?= te('Print / Save PDF') ?></button> <a class="btn ghost2" id="docmo" href="#" target="_blank" rel="noopener"><?= te('Open in new tab') ?></a> <button type="button" class="mx" id="docmx" aria-label="<?= te('Close') ?>">&times;</button></span></div>
+<iframe id="docmf" title="<?= te('Document preview') ?>" src="about:blank"></iframe></div></div>
 <script>(function(){var m=document.getElementById('docm'),f=document.getElementById('docmf'),o=document.getElementById('docmo'),t=document.getElementById('docmt');
-window.openDoc=function(url,title){f.src=url;o.href=url;t.textContent=title||'Pratinjau';m.hidden=false;document.body.style.overflow='hidden'};
+window.openDoc=function(url,title){f.src=url;o.href=url;t.textContent=title||<?= json_encode(t('Preview')) ?>;m.hidden=false;document.body.style.overflow='hidden'};
 function close(){m.hidden=true;f.src='about:blank';document.body.style.overflow=''}
 document.getElementById('docmx').onclick=close;m.addEventListener('click',function(e){if(e.target===m)close()});document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!m.hidden)close()});
 document.getElementById('docmp').onclick=function(){try{f.contentWindow.focus();f.contentWindow.print()}catch(x){window.open(f.src)}};
@@ -393,15 +411,15 @@ function agenda()
 {
     global $pdo;
     $r = $pdo->query("SELECT * FROM agenda ORDER BY day,time,id")->fetchAll();
-    if (!$r) { echo '<p class="center">Agenda akan segera diumumkan.</p>'; return; }
+    if (!$r) { echo '<p class="center">' . te('The program will be announced soon.') . '</p>'; return; }
     $G = []; foreach ($r as $a) $G[$a['day']][] = $a;
     $multi = count($G) > 1; $i = 0;
     echo '<div class="daytabs">';
-    if ($multi) { echo '<div class="tabs" role="tablist">'; foreach (array_keys($G) as $k => $d) echo '<button type="button" role="tab" class="tab' . ($k ? '' : ' on') . '" aria-selected="' . ($k ? 'false' : 'true') . '" data-day="d' . $k . '">' . e($d) . '</button>'; echo '</div>'; }
+    if ($multi) { echo '<div class="tabs" role="tablist">'; foreach (array_keys($G) as $k => $d) echo '<button type="button" role="tab" class="tab' . ($k ? '' : ' on') . '" aria-selected="' . ($k ? 'false' : 'true') . '" data-day="d' . $k . '">' . e(tx($d)) . '</button>'; echo '</div>'; }
     foreach ($G as $d => $list) {
-        echo '<div class="daypane" data-pane="d' . $i . '"' . ($i && $multi ? ' hidden' : '') . '>' . ($multi ? '' : '<h3>' . e($d) . '</h3>');
-        echo '<div class="scroll"><table class="prog"><tr><th>Waktu</th><th>Sesi</th><th>Pembicara</th><th>Ruang / Track</th></tr>';
-        foreach ($list as $a) echo '<tr><td class="nowrap">' . e($a['time']) . '</td><td><b>' . e($a['title']) . '</b>' . (!empty($a['description']) ? '<br><small>' . nl2br(e($a['description'])) . '</small>' : '') . '</td><td>' . e($a['speaker']) . '</td><td>' . e(trim($a['room'] . ((!empty($a['track']) && $a['room']) ? ' · ' : '') . ($a['track'] ?? ''))) . '</td></tr>';
+        echo '<div class="daypane" data-pane="d' . $i . '"' . ($i && $multi ? ' hidden' : '') . '>' . ($multi ? '' : '<h3>' . e(tx($d)) . '</h3>');
+        echo '<div class="scroll"><table class="prog"><tr><th>' . te('Time') . '</th><th>' . te('Session') . '</th><th>' . te('Speaker') . '</th><th>' . te('Room / Track') . '</th></tr>';
+        foreach ($list as $a) echo '<tr><td class="nowrap">' . e($a['time']) . '</td><td><b>' . e(tx($a['title'])) . '</b>' . (!empty($a['description']) ? '<br><small>' . nl2br(e(tx($a['description']))) . '</small>' : '') . '</td><td>' . e($a['speaker']) . '</td><td>' . e(trim($a['room'] . ((!empty($a['track']) && $a['room']) ? ' · ' : '') . tx($a['track'] ?? ''))) . '</td></tr>';
         echo '</table></div></div>'; $i++;
     }
     echo '</div>';

@@ -16,7 +16,7 @@ Ditulis dengan PHP + MySQL tanpa framework, sehingga bisa langsung diunggah ke s
 - Tampilan responsif, mode gelap otomatis, aksesibilitas dasar (skip link, aria)
 
 **Peserta**
-- Daftar akun (popup), login, **lupa / reset password via email**
+- Daftar akun & login dalam **popup**, **lupa / reset password via email**
 - Formulir registrasi: data peserta, ORCID, kategori & kehadiran (offline/online), naskah untuk presenter
   (track, abstrak dengan penghitung kata, keywords, file), pembayaran (boleh **bayar nanti**)
 - Dashboard dengan **progres pendaftaran**, catatan panitia, komentar reviewer
@@ -79,6 +79,17 @@ Batas unggah file 10 MB per file — sesuaikan `upload_max_filesize`/`post_max_s
 
 Email massal dikirim lewat endpoint batch Resend (maks. 100 email per permintaan). Perhatikan kuota paket Resend Anda.
 Hosting harus mengaktifkan ekstensi PHP **cURL**.
+
+## Dwibahasa (English / Indonesia)
+
+- Situs tampil dalam **bahasa Inggris** secara bawaan; pengunjung beralih lewat tombol **EN | ID** di menu (tersimpan di cookie, ada `hreflang` untuk SEO).
+- Teks antarmuka ada di `lang/id.php` (kunci = teks Inggris di kode, fungsi `t()`).
+- Konten yang ditulis admin (Tentang, Tanggal Penting, Topik, FAQ, Pengumuman, Agenda, peran pembicara, kategori biaya, dll.)
+  **diterjemahkan otomatis** ke EN dan ID saat disimpan (Google Translate, dikirim per batch) dan disimpan di cache —
+  tidak memperlambat halaman. Nama orang, nama konferensi, tema, dan lokasi tidak diterjemahkan.
+- Admin → **Terjemahan**: status, terjemahkan ulang, koreksi manual (tidak ditimpa), dan opsi API key Google Cloud Translation resmi.
+- Dokumen resmi (sertifikat, LoA, invoice, surat undangan) selalu berbahasa Inggris dan memakai versi Inggris dari konten admin.
+- Panel admin tetap berbahasa Indonesia.
 
 ## Pemeriksaan Sistem & Backup
 
