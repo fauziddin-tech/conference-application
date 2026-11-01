@@ -9,7 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($u = $s->fetch()) {
             $tok = bin2hex(random_bytes(24));
             $pdo->prepare("UPDATE users SET reset_hash=?,reset_exp=? WHERE id=?")->execute([hash('sha256', $tok), time() + 3600, $u['id']]);
-            notify($u['email'], $u['name'], 'Password reset', "We received a request to reset your password. Open the link below within 60 minutes to set a new password:\n\n" . absUrl('reset.php?u=' . $u['id'] . '&k=' . $tok) . "\n\nIf you did not request this, you can ignore this email.");
+            notify($u['email'], $u['name'], 'Password reset', "We received a request to reset your password. Open the link below within 60 minutes to set a new password:\n\n" . absUrl('reset.php?u=' . $u['id'] . '&k=' . $tok) . "\n\nIf you did not request this, you can ignore this email.", 'login.php');
         }
         $sent = true; // pesan sama agar tidak membocorkan email terdaftar
     }

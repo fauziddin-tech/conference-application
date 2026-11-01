@@ -9,8 +9,26 @@ require_once __DIR__ . '/lib/paper.php';
 require_once __DIR__ . '/lib/backup.php';
 require_once __DIR__ . '/lib/i18n.php';
 
+// Jangan tampilkan detail teknis ke pengunjung (aktifkan define('DEBUG', true) di config.php saat pengembangan).
+if (!defined('DEBUG') || !DEBUG) ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+set_exception_handler(function ($x) {
+    error_log('Konferensi: ' . get_class($x) . ': ' . $x->getMessage() . ' @ ' . $x->getFile() . ':' . $x->getLine());
+    if (!headers_sent()) { http_response_code(500); header('Content-Type: text/html; charset=utf-8'); }
+    echo '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Error</title></head><body style="font-family:system-ui,sans-serif;max-width:560px;margin:12vh auto;padding:0 16px;color:#1d3a3a"><h2>Sorry, something went wrong.</h2><p>Please try again in a few minutes. If the problem persists, contact the committee.</p><p style="color:#666">Maaf, terjadi gangguan. Silakan coba lagi beberapa saat lagi.</p></body></html>';
+    if (defined('DEBUG') && DEBUG) echo '<pre>' . htmlspecialchars((string)$x) . '</pre>';
+    exit;
+});
+
 $HTTPS = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ($_SERVER['SERVER_PORT'] ?? '') == '443' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
 if (session_status() === PHP_SESSION_NONE) {
+    // Sesi disimpan di folder privat aplikasi dan bertahan 8 jam tanpa aktivitas, agar formulir panjang
+    // (registrasi, review) tidak gagal karena sesi dihapus oleh pembersihan sesi bawaan hosting (±24 menit).
+    $sd = __DIR__ . '/uploads/private/sessions';
+    if (!is_dir($sd)) @mkdir($sd, 0700, true);
+    if (is_dir($sd) && is_writable($sd)) session_save_path($sd);
+    ini_set('session.gc_maxlifetime', '28800');
+    ini_set('session.use_strict_mode', '1');
     session_set_cookie_params(['lifetime' => 0, 'path' => BASE, 'httponly' => true, 'samesite' => 'Lax', 'secure' => $HTTPS]);
     session_start();
 }
@@ -18,6 +36,7 @@ if (!headers_sent()) {
     header('X-Frame-Options: SAMEORIGIN');
     header('X-Content-Type-Options: nosniff');
     header('Referrer-Policy: strict-origin-when-cross-origin');
+    header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
 }
 $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4", DB_USER, DB_PASS, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
 
@@ -38,7 +57,13 @@ try { $pdo->exec("SET time_zone='" . date('P') . "'"); } catch (Exception $x) {}
 function e($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 function token() { if (empty($_SESSION['t'])) $_SESSION['t'] = bin2hex(random_bytes(16)); return $_SESSION['t']; }
 function csrf() { return '<input type="hidden" name="t" value="' . token() . '">'; }
-function chk() { if ($_SERVER['REQUEST_METHOD'] === 'POST' && !hash_equals($_SESSION['t'] ?? '', (string)($_POST['t'] ?? ''))) { http_response_code(400); die('Token tidak valid, muat ulang halaman.'); } }
+function chk()
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || hash_equals($_SESSION['t'] ?? '', (string)($_POST['t'] ?? ''))) return;
+    $m = t('Your session has expired or the page was open too long. Please try again.');
+    if (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'fetch') { header('Content-Type: application/json'); echo json_encode(['error' => $m]); exit; }
+    flash($m); go($_SERVER['REQUEST_URI'] ?? BASE);
+}
 function post($k) { return trim((string)($_POST[$k] ?? '')); }
 function flash($m = null) { if ($m !== null) { $_SESSION['f'] = $m; return; } $f = $_SESSION['f'] ?? ''; unset($_SESSION['f']); return $f; }
 function go($to) { header('Location: ' . $to); exit; }
@@ -48,8 +73,21 @@ function words($s) { return count(preg_split('/\s+/u', trim((string)$s), -1, PRE
 function lbl($map, $k) { return $map[$k] ?? $k; }
 function no($p, $id) { return $p . str_pad((string)$id, 4, '0', STR_PAD_LEFT); }
 function initials($n) { $w = preg_split('/[\s,]+/', (string)$n, -1, PREG_SPLIT_NO_EMPTY); $o = ''; foreach ($w as $x) { if (strpos($x, '.') !== false) continue; $o .= mb_strtoupper(mb_substr($x, 0, 1)); if (mb_strlen($o) >= 2) break; } return $o !== '' ? $o : '?'; }
-function host() { return preg_replace('/[^A-Za-z0-9.:-]/', '', $_SERVER['HTTP_HOST'] ?? 'localhost'); }
-function absUrl($p = '') { global $HTTPS; return ($HTTPS ? 'https' : 'http') . '://' . host() . BASE . ltrim($p, '/'); }
+/** Host dari permintaan saat ini (TIDAK dipercaya untuk tautan di email/dokumen; pakai siteUrl()). */
+function reqHost() { return preg_replace('/[^A-Za-z0-9.:-]/', '', $_SERVER['HTTP_HOST'] ?? 'localhost'); }
+function reqUrl() { global $HTTPS; return ($HTTPS ? 'https' : 'http') . '://' . reqHost() . BASE; }
+/**
+ * Alamat resmi situs (mis. https://picoe.org/). Dipakai untuk semua tautan di email, QR, sertifikat, kalender.
+ * Urutan: konstanta SITE_URL di config.php → Pengaturan (terisi otomatis saat admin membuka panel) → alamat permintaan.
+ * Mencegah "Host header injection" (tautan reset password diarahkan ke domain penipu).
+ */
+function siteUrl()
+{
+    $s = defined('SITE_URL') ? (string)SITE_URL : setting('site_url');
+    return preg_match('#^https?://[A-Za-z0-9.:-]+(/.*)?$#', $s) ? rtrim($s, '/') . '/' : reqUrl();
+}
+function host() { return (string)parse_url(siteUrl(), PHP_URL_HOST) . (parse_url(siteUrl(), PHP_URL_PORT) ? ':' . parse_url(siteUrl(), PHP_URL_PORT) : ''); }
+function absUrl($p = '') { return siteUrl() . ltrim($p, '/'); }
 function fdate($d) { if (!$d) return ''; $t = strtotime($d); if (!$t) return $d; $m = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']; return date('j', $t) . ' ' . $m[(int)date('n', $t)] . ' ' . date('Y', $t); }
 function fdateEn($d) { $t = strtotime((string)$d); return $t ? date('F j, Y', $t) : (string)$d; }
 
@@ -63,7 +101,12 @@ function user()
 {
     global $pdo; static $u = false;
     if (empty($_SESSION['uid'])) return null;
-    if ($u === false || (int)$u['id'] !== (int)$_SESSION['uid']) { $s = $pdo->prepare("SELECT * FROM users WHERE id=?"); $s->execute([$_SESSION['uid']]); $u = $s->fetch() ?: null; }
+    if ($u === false || !$u || (int)$u['id'] !== (int)$_SESSION['uid']) { $s = $pdo->prepare("SELECT * FROM users WHERE id=?"); $s->execute([$_SESSION['uid']]); $u = $s->fetch() ?: null; }
+    if ($u) {
+        // sesi lama (dibuat sebelum password diganti/direset) dikeluarkan
+        if (!isset($_SESSION['sv'])) $_SESSION['sv'] = (int)$u['sess_ver'];
+        elseif ((int)$_SESSION['sv'] !== (int)$u['sess_ver']) { unset($_SESSION['uid'], $_SESSION['sv']); $u = null; }
+    }
     return $u;
 }
 function need($roles = null)
@@ -72,6 +115,13 @@ function need($roles = null)
     if (!$u) { $_SESSION['back'] = $_SERVER['REQUEST_URI'] ?? ''; go(BASE . 'login.php'); }
     if ($roles && !in_array($u['role'], (array)$roles, true)) { http_response_code(403); die(t('Access denied')); }
     return $u;
+}
+/** Ganti password & keluarkan semua sesi lain akun ini (sesi saat ini tetap masuk bila $keepCurrent). */
+function setPassword($uid, $pw, $keepCurrent = false)
+{
+    global $pdo;
+    $pdo->prepare("UPDATE users SET password=?,sess_ver=sess_ver+1,reset_hash=NULL,reset_exp=NULL WHERE id=?")->execute([password_hash($pw, PASSWORD_DEFAULT), $uid]);
+    if ($keepCurrent && (int)($_SESSION['uid'] ?? 0) === (int)$uid) { $q = $pdo->prepare("SELECT sess_ver FROM users WHERE id=?"); $q->execute([$uid]); $_SESSION['sv'] = (int)$q->fetchColumn(); }
 }
 function homeFor($u) { return ['admin' => 'admin/', 'reviewer' => 'reviewer.php'][$u['role']] ?? 'dashboard.php'; }
 function regOf($uid) { global $pdo; $q = $pdo->prepare("SELECT * FROM registrations WHERE user_id=?"); $q->execute([$uid]); return $q->fetch() ?: null; }
@@ -234,9 +284,9 @@ function sendBatch($msgs)
     return [$sent, count($msgs), $last];
 }
 /** Kirim email berformat standar: salam + isi + tanda tangan panitia. */
-function notify($to, $name, $subject, $text)
+function notify($to, $name, $subject, $text, $link = 'dashboard.php')
 {
-    $body = "Dear " . $name . ",\n\n" . trim($text) . "\n\nYou can view your registration status at:\n" . absUrl('dashboard.php') . "\n\nBest regards,\nOrganizing Committee\n" . setting('name') . "\n" . (setting('email') ? setting('email') . "\n" : '');
+    $body = "Dear " . $name . ",\n\n" . trim($text) . "\n\n" . ($link === 'dashboard.php' ? "You can view your registration status at:" : "Open:") . "\n" . absUrl($link) . "\n\nBest regards,\nOrganizing Committee\n" . setting('name') . "\n" . (setting('email') ? setting('email') . "\n" : '');
     return sendMail($to, '[' . brand() . '] ' . $subject, $body);
 }
 
@@ -342,7 +392,7 @@ function head($t, $extra = '')
 <link rel="stylesheet" href="<?= $H ?>style.css?v=<?= @filemtime(__DIR__ . "/style.css") ?>"><?= $extra ?></head><body id="top"<?= defined('ADMIN') ? ' class="adm"' : '' ?>>
 <a class="skip" href="#main"><?= te('Skip to content') ?></a>
 <nav><a class="brand" href="<?= $H ?>"><?php if (setting('logo_url')): ?><img src="<?= e(imgSrc(setting('logo_url'))) ?>" alt=""><?php endif; ?><?= e(brand()) ?></a><button class="burger" type="button" aria-label="Menu" aria-expanded="false" onclick="var n=this.parentNode;n.classList.toggle('open');this.setAttribute('aria-expanded',n.classList.contains('open'))">&#9776;</button><div class="links">
-<a href="<?= $H ?>#about"><?= te('About') ?></a><a href="<?= $H ?>#speakers"><?= te('Speakers') ?></a><a href="<?= $H ?>#cfp"><?= te('Call for Papers') ?></a><a href="<?= $H ?>#program"><?= te('Program') ?></a><a href="<?= $H ?>#register"><?= te('Registration') ?></a><a href="<?= $H ?>#venue"><?= te('Venue') ?></a><?php if (setting('journals')): ?><a href="<?= $H ?>#publication"><?= te('Publication') ?></a><?php endif; ?><a href="<?= $H ?>#contact"><?= te('Contact') ?></a><?php if (setting('submission_url')): ?><a href="<?= e(setting('submission_url')) ?>" target="_blank" rel="noopener"><?= te('Make Submission') ?></a><?php endif; ?>
+<a href="<?= $H ?>#about"><?= te('About') ?></a><a href="<?= $H ?>#speakers"><?= te('Speakers') ?></a><a href="<?= $H ?>#cfp"><?= te('Call for Papers') ?></a><a href="<?= $H ?>#program"><?= te('Program') ?></a><a href="<?= $H ?>#register"><?= te('Registration') ?></a><a href="<?= $H ?>#venue"><?= te('Venue') ?></a><?php if (setting('journals')): ?><a href="<?= $H ?>#publication"><?= te('Publication') ?></a><?php endif; ?><a href="<?= $H ?>#contact"><?= te('Contact') ?></a><?php if (isurl(setting('submission_url'))): ?><a href="<?= e(setting('submission_url')) ?>" target="_blank" rel="noopener"><?= te('Make Submission') ?></a><?php endif; ?>
 <?php if ($u): ?><?php if ($u['role'] === 'admin'): ?><a href="<?= $H ?>admin/">Admin</a><?php elseif ($u['role'] === 'reviewer'): ?><a href="<?= $H ?>reviewer.php"><?= te('Review') ?></a><?php else: ?><a href="<?= $H ?>dashboard.php"><?= te('Dashboard') ?></a><?php endif; ?><?php $nn = unreadCount($u['id']); ?><a href="<?= $H ?>notifikasi.php" class="bell" aria-label="<?= te('Notifications') ?><?= $nn ? ' (' . te('%d unread', $nn) . ')' : '' ?>"><svg class="ic" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="bl"><?= te('Notifications') ?></span><?php if ($nn): ?><b><?= $nn > 99 ? '99+' : $nn ?></b><?php endif; ?></a><a href="<?= $H ?>logout.php?t=<?= token() ?>"><?= te('Log out') ?> (<?= e(mb_strimwidth($u['name'], 0, 20, '…')) ?>)</a>
 <?php else: ?><a href="<?= $H ?>login.php"><?= te('Log in') ?></a><a class="btn" href="<?= $H ?>register.php"><?= te('Register') ?></a><?php endif; ?>
 <span class="langsw" role="group" aria-label="Language / Bahasa"><?php foreach (LANGS as $l => $n): ?><a href="<?= e(langUrl($l)) ?>" hreflang="<?= $l ?>" lang="<?= $l ?>" title="<?= e($n) ?>"<?= $l === $L ? ' class="on" aria-current="true"' : '' ?>><?= strtoupper($l) ?></a><?php endforeach; ?></span></div></nav>
@@ -417,11 +467,32 @@ document.getElementById('docmp').onclick=function(){try{f.contentWindow.focus();
 document.addEventListener('click',function(e){var a=e.target.closest('a.js-doc');if(!a||e.ctrlKey||e.metaKey||e.shiftKey)return;e.preventDefault();openDoc(a.href,a.dataset.title||a.textContent.trim())})})();</script></body></html><?php
 }
 
+/** Semua sesi agenda, diurutkan alami (Day 2 sebelum Day 10), lalu waktu. */
+function agendaRows()
+{
+    global $pdo;
+    $r = $pdo->query("SELECT * FROM agenda")->fetchAll();
+    usort($r, function ($a, $b) { return strnatcasecmp($a['day'], $b['day']) ?: strnatcasecmp($a['time'], $b['time']) ?: $a['id'] <=> $b['id']; });
+    return $r;
+}
+/** Pembersihan harian: log email > 180 hari, notifikasi terbaca > 120 hari, data pembatas percobaan > 1 hari. */
+function housekeeping()
+{
+    global $pdo;
+    if (setting('housekeep_at') === date('Y-m-d')) return;
+    try {
+        $pdo->exec("DELETE FROM mail_log WHERE created_at < NOW() - INTERVAL 180 DAY");
+        $pdo->exec("DELETE FROM notifications WHERE is_read=1 AND created_at < NOW() - INTERVAL 120 DAY");
+        $pdo->prepare("DELETE FROM throttle WHERE ts < ?")->execute([time() - 86400]);
+        foreach (glob(__DIR__ . '/uploads/private/*.part') ?: [] as $f) if (filemtime($f) < time() - 86400) @unlink($f);
+    } catch (Exception $x) { error_log('housekeeping: ' . $x->getMessage()); }
+    setSetting('housekeep_at', date('Y-m-d'));
+}
 /** Jadwal acara, dikelompokkan per hari dengan tab. */
 function agenda()
 {
     global $pdo;
-    $r = $pdo->query("SELECT * FROM agenda ORDER BY day,time,id")->fetchAll();
+    $r = agendaRows();
     if (!$r) { echo '<p class="center">' . te('The program will be announced soon.') . '</p>'; return; }
     $G = []; foreach ($r as $a) $G[$a['day']][] = $a;
     $multi = count($G) > 1; $i = 0;

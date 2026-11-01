@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         else {
             hit('reg:' . ip());
             $pdo->prepare("INSERT INTO users(name,email,password,role,status) VALUES(?,?,?,'peserta','pending')")->execute([$n, $m, password_hash($pw, PASSWORD_DEFAULT)]);
-            session_regenerate_id(true); $_SESSION['uid'] = $pdo->lastInsertId();
+            session_regenerate_id(true); $_SESSION['uid'] = $pdo->lastInsertId(); $_SESSION['sv'] = 0;
             notify($m, $n, 'Account created', "Thank you for creating an account for " . setting('name') . ".\n\nNext step: complete the conference registration form (participant data, paper for presenters, and payment).\n" . absUrl('registrasi.php'));
             flash(t('Account created. Please continue by completing the conference registration form.'));
             if ($ajax) { header('Content-Type: application/json'); echo json_encode(['ok' => 1, 'to' => BASE . 'registrasi.php']); exit; }

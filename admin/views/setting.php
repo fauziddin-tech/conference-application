@@ -15,7 +15,7 @@ $cb = function ($k, $l) { return '<label class="chk full"><input type="checkbox"
 <?= $in('name', 'Nama Konferensi') ?><?= $in('tagline', 'Tagline / Tema') ?><?= $in('organizer', 'Penyelenggara') ?>
 <label>Logo <small>(JPG/PNG/WEBP; dipakai di navigasi, dokumen &amp; sertifikat)</small><input type="file" name="logo" accept="image/jpeg,image/png,image/webp"><?php if (setting('logo_url')): ?><img class="thumb" src="<?= e(imgSrc(setting('logo_url'))) ?>" alt=""><?php endif; ?></label>
 <?= $in('logo_url', 'atau URL logo', 'text', 'https://...') ?>
-<?= $in('website', 'Website') ?><?= $in('email', 'Email resmi panitia', 'email') ?>
+<?= $in('site_url', 'Alamat resmi situs <small>(dipakai di email, QR &amp; sertifikat; terisi otomatis)</small>', 'url', 'https://picoe.org/') ?><?= $in('website', 'Website (teks tampilan)') ?><?= $in('email', 'Email resmi panitia', 'email') ?>
 <?= $ta('about', 'Tentang', 6) ?>
 <h3>Waktu &amp; Tempat</h3>
 <?= $in('date', 'Tanggal (teks tampilan)') ?><?= $in('time', 'Waktu (teks tampilan)') ?>

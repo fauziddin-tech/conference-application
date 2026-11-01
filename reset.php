@@ -7,7 +7,7 @@ if ($valid && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (strlen($pw) < 8) $err = t('Password must be at least 8 characters.');
     elseif ($pw !== ($_POST['password2'] ?? '')) $err = t('The passwords do not match.');
     else {
-        $pdo->prepare("UPDATE users SET password=?,reset_hash=NULL,reset_exp=NULL WHERE id=?")->execute([password_hash($pw, PASSWORD_DEFAULT), $id]);
+        setPassword($id, $pw);
         flash(t('Your password has been changed. Please log in with the new password.')); go('login.php');
     }
 }

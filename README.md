@@ -53,7 +53,9 @@ Ditulis dengan PHP + MySQL tanpa framework, sehingga bisa langsung diunggah ke s
 - Password hash bcrypt, CSRF token di semua form, sesi `HttpOnly`/`SameSite`, regenerasi sesi saat login
 - Pembatasan percobaan login/daftar/reset (anti brute force), honeypot anti-bot
 - File unggahan privat (bukti bayar, naskah) di luar akses publik, validasi tipe file (magic bytes)
-- Header keamanan (X-Frame-Options, nosniff, Referrer-Policy), proteksi CSV injection
+- Header keamanan (X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy), proteksi CSV injection
+- Tautan di email/QR/sertifikat memakai alamat resmi situs (kebal *Host header injection*)
+- Sesi privat 8 jam; mengganti/mereset password mengeluarkan sesi lain; halaman error ramah tanpa detail teknis
 
 ## Instalasi (cPanel)
 
@@ -104,6 +106,14 @@ serta kelengkapan pengaturan konferensi — lengkap dengan tautan "perbaiki".
 - **Backup otomatis harian** saat admin membuka panel bila backup terakhir lebih dari 24 jam (cadangan jika Cron belum diatur).
 - Backup lebih lama dari N hari (bawaan 14) dihapus otomatis. Pemulihan: phpMyAdmin → Import file `.sql.gz`.
 - File unggahan (`uploads/`) sertakan dalam fitur Backup cPanel secara berkala.
+
+## Konfigurasi tambahan (opsional) di `config.php`
+
+```php
+define('SITE_URL', 'https://picoe.org/');   // alamat resmi; bila tidak diisi, diambil dari Pengaturan (terisi otomatis)
+define('BACKUP_DIR', '/home/USER/backup-konferensi'); // lokasi backup
+define('DEBUG', true);                       // tampilkan detail error (hanya saat pengembangan)
+```
 
 ## Upgrade dari versi lama
 

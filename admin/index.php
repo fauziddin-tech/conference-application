@@ -50,7 +50,10 @@ if ($p === 'backupdl') {
     header('Content-Disposition: attachment; filename="' . basename($f) . '"'); header('X-Content-Type-Options: nosniff');
     readfile($f); exit;
 }
+// Alamat resmi situs dicatat dari kunjungan admin pertama (dipakai untuk tautan email/QR; bisa diubah di Pengaturan)
+if (setting('site_url') === '' && !defined('SITE_URL')) setSetting('site_url', reqUrl());
 $autoBackup = $_SERVER['REQUEST_METHOD'] === 'GET' ? backupAutoIfDue($pdo) : null;
+if ($_SERVER['REQUEST_METHOD'] === 'GET') housekeeping();
 
 /* ---------- aksi (POST) ---------- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -81,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         else {
             $pw = substr(strtr(base64_encode(random_bytes(9)), '+/=', 'xyz'), 0, 10);
             $pdo->prepare("INSERT INTO users(name,email,institution,password,role,status) VALUES(?,?,?,?,?,'confirmed')")->execute([$n, $m, post('institution'), password_hash($pw, PASSWORD_DEFAULT), $role]);
-            $sent = !empty($_POST['send']) && notify($m, $n, 'Your ' . $role . ' account', "An account has been created for you as $role of " . setting('name') . ".\n\nLogin: " . absUrl('login.php') . "\nEmail: $m\nPassword: $pw\n\nPlease change your password after logging in.");
+            $sent = !empty($_POST['send']) && notify($m, $n, 'Your ' . $role . ' account', "An account has been created for you as $role of " . setting('name') . ".\n\nLogin: " . absUrl('login.php') . "\nEmail: $m\nPassword: $pw\n\nPlease change your password after logging in.", 'login.php');
             $msg = 'Akun ' . $role . ' dibuat. Password awal: ' . $pw . ($sent ? ' (juga dikirim via email).' : ' (catat dan sampaikan; tidak ditampilkan lagi).');
         }
         $back = '?p=pengguna'; break;
@@ -101,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $back = '?p=edit&id=' . $id; $pw = (string)($_POST['password'] ?? '');
         if ($pw === '') $pw = substr(strtr(base64_encode(random_bytes(9)), '+/=', 'xyz'), 0, 10);
         if (strlen($pw) < 8) $msg = 'Password minimal 8 karakter.';
-        else { $pdo->prepare("UPDATE users SET password=? WHERE id=? AND role IN('peserta','reviewer')")->execute([password_hash($pw, PASSWORD_DEFAULT), $id]); $msg = 'Password direset. Password baru: ' . $pw . ' (catat dan sampaikan ke pengguna; tidak ditampilkan lagi).'; }
+        else { $q = $pdo->prepare("SELECT 1 FROM users WHERE id=? AND role IN('peserta','reviewer')"); $q->execute([$id]); if ($q->fetch()) { setPassword($id, $pw); $msg = 'Password direset. Password baru: ' . $pw . ' (catat dan sampaikan ke pengguna; tidak ditampilkan lagi). Pengguna dikeluarkan dari sesi yang sedang aktif.'; } }
         break;
     case 'regsave':
         $back = '?p=detail&id=' . $id;
@@ -136,7 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare("INSERT IGNORE INTO reviews(reg_id,reviewer_id,round,due_date) VALUES(?,?,?,?)")->execute([$id, $rid, $pr['review_round'], $due]);
         $pdo->prepare("UPDATE registrations SET paper_status='under_review' WHERE id=? AND paper_status='submitted'")->execute([$id]);
         notifyUser($rid, 'Permintaan review ' . no('R', $id) . ' (ronde ' . $pr['review_round'] . '), tenggat ' . fdate($due), 'reviewer.php?id=' . $id, 'Review request ' . no('R', $id) . ' (round ' . $pr['review_round'] . '), due ' . fdateEn($due));
-        $ok = notify($rv['email'], $rv['name'], 'Review request ' . no('R', $id), "You have been assigned to review the paper \"" . $pr['article_title'] . "\" (" . no('R', $id) . ", round " . $pr['review_round'] . ").\n\nPlease submit your review by " . fdateEn($due) . ". You may write comments directly in the manuscript file (Word comments / track changes) and upload it with your review.\n\n" . absUrl('reviewer.php?id=' . $id));
+        $ok = notify($rv['email'], $rv['name'], 'Review request ' . no('R', $id), "You have been assigned to review the paper \"" . $pr['article_title'] . "\" (" . no('R', $id) . ", round " . $pr['review_round'] . ").\n\nPlease submit your review by " . fdateEn($due) . ". You may write comments directly in the manuscript file (Word comments / track changes) and upload it with your review.\n\n" . absUrl('reviewer.php?id=' . $id), 'reviewer.php?id=' . $id);
         $msg = 'Reviewer ditugaskan' . ($ok ? ' dan diberi tahu via email.' : ' (email notifikasi gagal terkirim).'); break;
     case 'unassign':
         $back = '?p=detail&id=' . $id;
@@ -232,8 +235,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         [$n, $tot, $le] = sendBatch(array_map(function ($r) use ($sub, $body) { return [$r['email'], '[' . brand() . '] ' . $sub, strtr($body, ['{name}' => $r['name'], '{regno}' => $r['regno'], '{email}' => $r['email']]) . "\n\n--\n" . setting('name') . "\n" . absUrl()]; }, audienceRows($aud)));
         $msg = "Email terkirim: $n dari $tot penerima." . ($le ? " Error terakhir: $le" : ''); break;
     case 'set':
-        foreach (['name', 'tagline', 'organizer', 'date', 'time', 'event_start', 'event_end', 'timezone', 'location', 'venue_info', 'venue_url', 'map_url', 'website', 'email', 'mail_from', 'logo_url', 'submission_url', 'about', 'cfp_info', 'fees', 'early_deadline', 'payment_info', 'invoice_note', 'supporters', 'benefits', 'contacts', 'secretariat', 'online_link', 'online_info', 'signers', 'abs_min', 'abs_max', 'reg_close_msg', 'turnstile_site', 'turnstile_secret', 'blocked_domains', 'mail_from_name'] as $k)
+        foreach (['name', 'tagline', 'organizer', 'date', 'time', 'event_start', 'event_end', 'timezone', 'location', 'venue_info', 'venue_url', 'map_url', 'website', 'email', 'mail_from', 'logo_url', 'submission_url', 'about', 'cfp_info', 'fees', 'early_deadline', 'payment_info', 'invoice_note', 'supporters', 'benefits', 'contacts', 'secretariat', 'online_link', 'online_info', 'signers', 'abs_min', 'abs_max', 'reg_close_msg', 'site_url', 'turnstile_site', 'turnstile_secret', 'blocked_domains', 'mail_from_name'] as $k)
             if (isset($_POST[$k])) setSetting($k, trim((string)$_POST[$k]));
+        $bad = [];
+        foreach (['submission_url' => 'Link Make Submission', 'online_link' => 'Link online', 'venue_url' => 'Link info lokasi', 'map_url' => 'URL Google Maps', 'site_url' => 'Alamat situs'] as $k => $l)
+            if (setting($k) !== '' && !isurl(setting($k))) { setSetting($k, ''); $bad[] = $l; }
+        if (setting('site_url') !== '') setSetting('site_url', rtrim(setting('site_url'), '/') . '/');
+        if (setting('logo_url') !== '' && !isurl(setting('logo_url')) && !is_file(__DIR__ . '/../uploads/' . basename(setting('logo_url')))) { setSetting('logo_url', ''); $bad[] = 'URL logo'; }
+        if ($bad) $msg = 'Pengaturan disimpan, tetapi isian berikut dikosongkan karena bukan alamat http(s):// yang valid: ' . implode(', ', $bad) . '.';
         foreach (['reg_open', 'cert_open', 'cert_checkin', 'blind_review', 'paper_word_only', 'cert_reviewer'] as $k) setSetting($k, empty($_POST[$k]) ? '0' : '1');
         if (isset($_POST['review_days'])) setSetting('review_days', (string)max(1, min(90, (int)$_POST['review_days'])));
         if (isset($_POST['mail_driver'])) setSetting('mail_driver', post('mail_driver') === 'resend' ? 'resend' : 'mail');

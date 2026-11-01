@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($pw !== '') {
             if (!password_verify((string)($_POST['current'] ?? ''), $u['password'])) { flash(t('Current password is incorrect; the password was not changed.')); go('dashboard.php#profil'); }
             if (strlen($pw) < 8) { flash(t('The new password must be at least 8 characters; the password was not changed.')); go('dashboard.php#profil'); }
-            $pdo->prepare("UPDATE users SET password=? WHERE id=?")->execute([password_hash($pw, PASSWORD_DEFAULT), $u['id']]);
+            setPassword($u['id'], $pw, true);
         }
         flash(t('Profile updated.')); go('dashboard.php#profil');
     }
@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare("UPDATE registrations SET paper_status=? WHERE id=?")->execute([$revs ? 'under_review' : 'submitted', $R['id']]);
             foreach ($revs as $v) {
                 notifyUser($v['reviewer_id'], "Naskah revisi $reg (v$ver) siap direview ulang (ronde $new).", 'reviewer.php?id=' . $R['id'], "Revised paper $reg (v$ver) is ready for re-review (round $new).");
-                notify($v['email'], $v['name'], "Revised paper $reg ready for re-review", "The author has submitted a revised version (v$ver) of paper $reg \"" . $R['article_title'] . "\" with a response to the reviewers.\n\nPlease review the revision (round $new) by " . fdateEn($due) . ":\n" . absUrl('reviewer.php?id=' . $R['id']));
+                notify($v['email'], $v['name'], "Revised paper $reg ready for re-review", "The author has submitted a revised version (v$ver) of paper $reg \"" . $R['article_title'] . "\" with a response to the reviewers.\n\nPlease review the revision (round $new) by " . fdateEn($due) . ":\n" . absUrl('reviewer.php?id=' . $R['id']), 'reviewer.php?id=' . $R['id']);
             }
             notifyAdmins("Revisi masuk $reg (v$ver, ronde $new)" . ($revs ? '' : ' — belum ada reviewer'), 'admin/?p=detail&id=' . $R['id']);
             flash($revs ? t('Revised paper (v%d) submitted and forwarded to the reviewers for round %d.', $ver, $new) : t('Revised paper (v%d) submitted.', $ver));

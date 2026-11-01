@@ -35,27 +35,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($start !== '' && !strtotime($start)) throw new Exception('Tanggal mulai acara tidak valid.');
         $pdo = new PDO("mysql:host=" . $f('db_host') . ";dbname=" . $f('db_name') . ";charset=utf8mb4", $f('db_user'), $_POST['db_pass'] ?? '', [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
         migrate($pdo);
+        $base = rtrim(str_replace('\\', '/', dirname(dirname($_SERVER['SCRIPT_NAME']))), '/') . '/';
+        $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
         $st = $pdo->prepare("REPLACE INTO settings(k,v) VALUES(?,?)");
         foreach ([
             'name' => $f('s_name'), 'tagline' => $f('s_tagline'), 'date' => $f('s_date'), 'location' => $f('s_loc'),
             'email' => $f('s_email'), 'about' => $AB, 'time' => '08.00 - 18.00 WIB', 'website' => 'www.picoe.org',
             'organizer' => 'Fakultas Keguruan dan Ilmu Pendidikan, Universitas Pahlawan Tuanku Tambusai',
             'event_start' => $start ? date('Y-m-d\TH:i', strtotime($start)) : '', 'mail_from' => '',
+            'site_url' => ($https ? 'https' : 'http') . '://' . preg_replace('/[^A-Za-z0-9.:-]/', '', $_SERVER['HTTP_HOST'] ?? 'localhost') . $base,
             'speakers' => $SP, 'fees' => $FE, 'benefits' => $BE, 'contacts' => $CO, 'secretariat' => $SE,
             'cfp_info' => "Authors are invited to submit original, unpublished research papers. Presenters submit the abstract (50-250 words) and full paper through the registration form. All papers are peer reviewed by the scientific committee.",
             'signers' => "Dr. Rusdial Marta, M.Pd|Chairman of the Committee",
         ] as $k => $v) $st->execute([$k, $v]);
         // Data contoh yang bisa diubah/hapus dari panel admin
         $it = $pdo->prepare("INSERT INTO items(kind,sort,title,subtitle,body,extra) VALUES(?,?,?,?,?,?)");
-        $base = $start ? strtotime($start) : strtotime('+60 days');
+        $tbase = $start ? strtotime($start) : strtotime('+60 days');
         foreach ([['Abstract & full paper submission deadline', -45], ['Notification of acceptance', -30], ['Early bird registration deadline', -25], ['Final registration & payment deadline', -14], ['Conference day', 0]] as $i => $d)
-            $it->execute(['date', $i, $d[0], '', '', date('Y-m-d', $base + $d[1] * 86400)]);
+            $it->execute(['date', $i, $d[0], '', '', date('Y-m-d', $tbase + $d[1] * 86400)]);
         foreach (['Curriculum, Instruction & Assessment', 'Artificial Intelligence in Education', 'Digital Learning & Educational Technology', 'Language & Literature Education', 'Teacher Education & Professional Development', 'Inclusive & Special Needs Education'] as $i => $t)
             $it->execute(['topic', $i, $t, '', '', '']);
         foreach ([['Can I attend online?', 'Yes. Choose an online category on the registration form. The meeting link is shown in your dashboard after your payment is verified.'], ['When will I receive my certificate?', 'E-certificates can be downloaded from your dashboard after the event once the committee opens the certificate download.'], ['Can I request an invitation letter for visa purposes?', 'Yes. International participants can download an official invitation letter from the dashboard after payment verification.']] as $i => $q)
             $it->execute(['faq', $i, $q[0], '', $q[1], '']);
         $pdo->prepare("INSERT INTO users(name,email,password,role,status) VALUES(?,?,?,'admin','confirmed')")->execute([$f('a_name'), strtolower($f('a_email')), password_hash($_POST['a_pass'], PASSWORD_DEFAULT)]);
-        $base = rtrim(str_replace('\\', '/', dirname(dirname($_SERVER['SCRIPT_NAME']))), '/') . '/';
         $cfg = "<?php\ndefine('DB_HOST'," . var_export($f('db_host'), true) . ");\ndefine('DB_NAME'," . var_export($f('db_name'), true) . ");\ndefine('DB_USER'," . var_export($f('db_user'), true) . ");\ndefine('DB_PASS'," . var_export($_POST['db_pass'] ?? '', true) . ");\ndefine('BASE'," . var_export($base, true) . ");\n";
         if (file_put_contents("$root/config.php", $cfg) === false) throw new Exception('Gagal menulis config.php (cek izin folder).');
         @file_put_contents(__DIR__ . '/install.lock', '1'); $done = true;

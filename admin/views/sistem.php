@@ -33,6 +33,10 @@ $G['Database'] = $D;
 
 /* ---------- Keamanan & penyimpanan ---------- */
 $K = [];
+$su = siteUrl(); $suHost = parse_url($su, PHP_URL_HOST); $match = strcasecmp((string)$suHost, preg_replace('/:\d+$/', '', reqHost())) === 0;
+$K[] = ['Alamat resmi situs', setting('site_url') !== '' || defined('SITE_URL') ? ($match ? 'ok' : 'warn') : 'warn', $su . ($match ? ' — dipakai untuk tautan di email, QR & sertifikat.' : ' — berbeda dengan alamat yang sedang dibuka (' . reqHost() . '); periksa di Pengaturan.'), '?p=setting'];
+$sd = __DIR__ . '/../../uploads/private/sessions';
+$K[] = ['Penyimpanan sesi', is_dir($sd) && is_writable($sd) ? 'ok' : 'warn', is_dir($sd) && is_writable($sd) ? 'Folder sesi privat aktif (sesi bertahan 8 jam tanpa aktivitas).' : 'Folder uploads/private/sessions tidak dapat ditulis; memakai penyimpanan sesi bawaan hosting (bisa logout otomatis ±24 menit).'];
 $K[] = ['HTTPS', $HTTPS ? 'ok' : 'fail', $HTTPS ? 'Situs diakses melalui HTTPS.' : 'Situs diakses tanpa HTTPS; password & dokumen dapat disadap. Aktifkan SSL (AutoSSL / Cloudflare).'];
 $K[] = ['Folder install/', is_dir($root . '/install') ? 'fail' : 'ok', is_dir($root . '/install') ? 'Masih ada — hapus folder install/ lewat File Manager.' : 'Sudah dihapus.'];
 $ht = is_file($root . '/.htaccess') ? (string)file_get_contents($root . '/.htaccess') : '';

@@ -52,7 +52,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$locked && !$closed) {
         if (!$err && !empty($_FILES['proof']['name'])) { $pay = upFile($_FILES['proof'], ['pdf', 'jpg', 'jpeg', 'png'], $e, 'Proof of payment'); if (!$pay) $err[] = $e; }
         if ($err && $art) { rmPriv($art[0]); $art = null; }
         if (!$err) {
-            $row = $f; $row['pay_amount'] = feeText($feeRow);
+            $row = $f;
+            // harga yang tercatat saat mendaftar (mis. early bird) dipertahankan selama kategori tidak berubah
+            $row['pay_amount'] = ($R && $R['category'] === $cat && (string)$R['pay_amount'] !== '') ? $R['pay_amount'] : feeText($feeRow);
             if (!$pres && $R && $R['article_file']) { deletePaper($R['id']); $row['article_file'] = ''; $row['article_name'] = ''; $row['camera_file'] = ''; $row['camera_name'] = ''; }
             if ($pay) { rmPriv($R['pay_file'] ?? ''); $row['pay_file'] = $pay[0]; $row['pay_name'] = $pay[1]; }
             if (!$hasProof) { $row['pay_sender'] = ''; $row['pay_date'] = null; }

@@ -1,0 +1,14 @@
+User-agent: *
+Disallow: /admin/
+Disallow: /install/
+Disallow: /uploads/private/
+Disallow: /lib/
+Disallow: /tools/
+Disallow: /dashboard.php
+Disallow: /registrasi.php
+Disallow: /reviewer.php
+Disallow: /notifikasi.php
+Disallow: /checkin.php
+Disallow: /doc.php
+Disallow: /file.php
+Disallow: /reset.php

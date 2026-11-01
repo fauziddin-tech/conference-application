@@ -7,7 +7,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pw = (string)($_POST['password'] ?? '');
         if (!password_verify((string)($_POST['current'] ?? ''), $u['password'])) flash(t('Current password is incorrect.'));
         elseif (strlen($pw) < 8) flash(t('Password must be at least 8 characters.'));
-        else { $pdo->prepare("UPDATE users SET password=? WHERE id=?")->execute([password_hash($pw, PASSWORD_DEFAULT), $u['id']]); flash(t('Password changed.')); }
+        else { setPassword($u['id'], $pw, true); flash(t('Password changed.')); }
         go('reviewer.php');
     }
     $q = $pdo->prepare("SELECT v.id,v.file,v.submitted_at,r.paper_status,r.review_round FROM reviews v JOIN registrations r ON r.id=v.reg_id WHERE v.reg_id=? AND v.reviewer_id=? AND v.round=r.review_round"); $q->execute([$id, $u['id']]); $V = $q->fetch();

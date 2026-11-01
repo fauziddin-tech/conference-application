@@ -6,13 +6,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     else {
         $s = $pdo->prepare("SELECT * FROM users WHERE email=?"); $s->execute([$m]); $u = $s->fetch();
         if ($u && password_verify((string)($_POST['password'] ?? ''), $u['password'])) {
-            session_regenerate_id(true); $_SESSION['uid'] = $u['id'];
+            session_regenerate_id(true); $_SESSION['uid'] = $u['id']; $_SESSION['sv'] = (int)$u['sess_ver'];
             if (password_needs_rehash($u['password'], PASSWORD_DEFAULT)) $pdo->prepare("UPDATE users SET password=? WHERE id=?")->execute([password_hash($_POST['password'], PASSWORD_DEFAULT), $u['id']]);
             $pdo->prepare("UPDATE users SET last_login=NOW() WHERE id=?")->execute([$u['id']]);
             $to = homeFor($u);
             if ($u['role'] === 'peserta' && !regOf($u['id'])) $to = 'registrasi.php';
             $back = $_SESSION['back'] ?? ''; unset($_SESSION['back']);
-            if ($back && strpos($back, BASE) === 0 && strpos($back, '//') === false) $to = $back;
+            if ($back && strpos($back, BASE) === 0 && preg_match('#^/[A-Za-z0-9_\-./?=&%]*$#', $back) && strpos($back, '//') === false) $to = $back; // hanya jalur lokal
             if ($ajax) { header('Content-Type: application/json'); echo json_encode(['ok' => 1, 'to' => strpos($to, '/') === 0 ? $to : BASE . $to]); exit; }
             go($to);
         }

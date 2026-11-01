@@ -4,7 +4,7 @@
  * Dipakai oleh install/ (instalasi baru) dan inc.php (upgrade otomatis instalasi lama).
  * Setiap perubahan skema: naikkan DB_VERSION dan tambahkan langkahnya di migrate().
  */
-const DB_VERSION = 7;
+const DB_VERSION = 8;
 
 function colExists(PDO $pdo, $t, $c)
 {
@@ -84,6 +84,9 @@ function migrate(PDO $pdo)
     addCol($pdo, 'notifications', 'msg_en', 'VARCHAR(300) NULL');
     $pdo->exec("CREATE TABLE IF NOT EXISTS translations(h CHAR(32) NOT NULL,lang CHAR(2) NOT NULL,src MEDIUMTEXT,txt MEDIUMTEXT,src_lang VARCHAR(5),manual TINYINT DEFAULT 0,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,PRIMARY KEY(h,lang))$E");
 
+    // --- v8: versi sesi (keluarkan sesi lain saat password diganti) ---
+    addCol($pdo, 'users', 'sess_ver', 'INT NOT NULL DEFAULT 0');
+
     // Pengaturan baru dengan nilai bawaan (tidak menimpa yang sudah ada)
     $def = [
         'venue_info' => 'Hotel Pangeran Pekanbaru adalah hotel keluarga dan bisnis yang menawarkan layanan terbaik untuk kenyamanan setiap tamu.',
@@ -104,6 +107,8 @@ function migrate(PDO $pdo)
         'cert_reviewer' => '1',
         // v7
         'auto_translate' => '1',
+        // v8
+        'site_url' => '', 'housekeep_at' => '',
         'blocked_domains' => 'fextemp.com mailinator.com guerrillamail.com guerrillamail.info sharklasers.com grr.la 10minutemail.com 10minutemail.net temp-mail.org temp-mail.io tempmail.com tempmail.net tempmailo.com tempail.com yopmail.com yopmail.net trashmail.com trashmail.de getnada.com nada.email dispostable.com maildrop.cc throwawaymail.com emailondeck.com mohmal.com fakeinbox.com mintemail.com mytemp.email tmpmail.org tmpmail.net mail.tm 1secmail.com 1secmail.org 1secmail.net mailnesia.com spamgourmet.com mailcatch.com moakt.com emailfake.com fakemail.net burnermail.io inboxkitten.com mailpoof.com tempr.email discard.email spambox.us',
     ];
     $ins = $pdo->prepare("INSERT IGNORE INTO settings(k,v) VALUES(?,?)");

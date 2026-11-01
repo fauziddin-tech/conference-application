@@ -1,6 +1,6 @@
 <?php require 'inc.php';
 $u = user(); $em = setting('email');
-$map = setting('map_url') ?: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3989.6635694481533!2d101.45034407509675!3d0.5046369637092568!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31d5aebce81ef37f%3A0x9b837fcba8f106e9!2sHotel%20Pangeran!5e0!3m2!1sen!2sid!4v1716732941113!5m2!1sen!2sid';
+$map = isurl(setting('map_url')) ? setting('map_url') : 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3989.6635694481533!2d101.45034407509675!3d0.5046369637092568!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31d5aebce81ef37f%3A0x9b837fcba8f106e9!2sHotel%20Pangeran!5e0!3m2!1sen!2sid!4v1716732941113!5m2!1sen!2sid';
 $reg = $u ? homeFor($u) : 'register.php';
 if ($u && $u['role'] === 'peserta') $reg = regOf($u['id']) ? 'dashboard.php' : 'registrasi.php';
 $start = setting('event_start');
@@ -58,7 +58,7 @@ foreach ($keys as $k): $pr = $pri($k); $sz = [2, 1.5, 1][$pr]; $cl = ['k2', 'k15
 <div class="scroll"><table><tr><th><?= te('Category') ?></th><?php if ($early): ?><th>Early Bird (IDR)</th><th>Early Bird (USD)</th><th>Regular (IDR)</th><th>Regular (USD)</th><?php else: ?><th>IDR</th><th>USD</th><?php endif; ?></tr>
 <?php foreach (fees() as $f): ?><tr><td><?= e(tx($f['cat'])) ?></td><?php if ($early): ?><td class="<?= $eon ? 'hl' : 'muted' ?>"><?= e($f['eidr'] ?: '-') ?></td><td class="<?= $eon ? 'hl' : 'muted' ?>"><?= e($f['eusd'] ?: '-') ?></td><?php endif; ?><td><?= e($f['idr']) ?></td><td><?= e($f['usd']) ?></td></tr><?php endforeach; ?></table></div>
 <?php if (regOpen()): ?><ol class="steps"><li><b><?= te('Create an account') ?></b><small><?= te('Name, email, password') ?></small></li><li><b><?= te('Fill in the form') ?></b><small><?= te('Participant data & paper (presenters)') ?></small></li><li><b><?= te('Pay & upload proof') ?></b><small><?= te('Invoice available in the dashboard') ?></small></li><li><b><?= te('Committee verification') ?></b><small><?= te('LoA, badge & certificate in the dashboard') ?></small></li></ol>
-<p class="center"><a class="btn big" href="<?= $reg ?>"><?= $u ? te('Open Dashboard') : te('Register Now') ?></a><?php if (setting('submission_url')): ?> <a class="btn ghost2 big" href="<?= e(setting('submission_url')) ?>" target="_blank" rel="noopener"><?= te('Make Submission') ?></a><?php endif; ?></p>
+<p class="center"><a class="btn big" href="<?= $reg ?>"><?= $u ? te('Open Dashboard') : te('Register Now') ?></a><?php if (isurl(setting('submission_url'))): ?> <a class="btn ghost2 big" href="<?= e(setting('submission_url')) ?>" target="_blank" rel="noopener"><?= te('Make Submission') ?></a><?php endif; ?></p>
 <?php else: ?><p class="msg center"><?= e(tx(setting('reg_close_msg'))) ?></p><?php endif; ?></section>
 
 <?php if ($cm = items('committee')): $CG = []; foreach ($cm as $c) $CG[$c['extra'] ? tx($c['extra']) : t('Committee')][] = $c; ?>
