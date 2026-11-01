@@ -4,6 +4,33 @@ Require all denied
 </FilesMatch>
 # Batas unggah (aktif bila PHP berjalan sebagai modul Apache; di cPanel lain atur lewat "MultiPHP INI Editor")
 <IfModule mod_php.c>
-php_value upload_max_filesize 12M
+php_value upload_max_filesize 16M
 php_value post_max_size 25M
+</IfModule>
+
+# ---- Kecepatan: kompresi teks ----
+<IfModule mod_deflate.c>
+AddOutputFilterByType DEFLATE text/html text/css text/plain application/javascript text/javascript application/json image/svg+xml text/calendar
+</IfModule>
+
+# ---- Kecepatan: cache browser untuk file statis ----
+# Nama file gambar unggahan selalu unik dan style.css memakai penanda versi (?v=), jadi aman disimpan lama.
+<IfModule mod_expires.c>
+ExpiresActive On
+ExpiresByType text/css "access plus 1 year"
+ExpiresByType application/javascript "access plus 1 year"
+ExpiresByType text/javascript "access plus 1 year"
+ExpiresByType image/webp "access plus 1 year"
+ExpiresByType image/jpeg "access plus 1 year"
+ExpiresByType image/png "access plus 1 year"
+ExpiresByType image/svg+xml "access plus 1 year"
+ExpiresByType application/pdf "access plus 1 month"
+</IfModule>
+<IfModule mod_headers.c>
+<FilesMatch "\.(css|js|webp|jpe?g|png|svg)$">
+Header set Cache-Control "public, max-age=31536000, immutable"
+</FilesMatch>
+</IfModule>
+<IfModule mod_mime.c>
+AddType image/webp .webp
 </IfModule>

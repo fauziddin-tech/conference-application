@@ -8,6 +8,7 @@ require_once __DIR__ . '/lib/schema.php';
 require_once __DIR__ . '/lib/paper.php';
 require_once __DIR__ . '/lib/backup.php';
 require_once __DIR__ . '/lib/i18n.php';
+require_once __DIR__ . '/lib/image.php';
 
 // Jangan tampilkan detail teknis ke pengunjung (aktifkan define('DEBUG', true) di config.php saat pengembangan).
 if (!defined('DEBUG') || !DEBUG) ini_set('display_errors', '0');
@@ -335,6 +336,7 @@ function upFile($f, $exts, &$err, $label, $public = false)
 {
     $err = '';
     if (!$f || ($f['error'] ?? 4) === 4) { $err = t('%s: no file selected.', $label); return null; }
+    if (in_array($f['error'], [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)) { $err = t('%s: the file exceeds the server upload limit (%s).', $label, ini_get('upload_max_filesize')); return null; }
     if ($f['error'] !== 0) { $err = t('%s: upload failed (the file may exceed the server limit).', $label); return null; }
     if ($f['size'] > 10485760) { $err = t('%s: maximum size is 10 MB.', $label); return null; }
     $ext = strtolower(pathinfo($f['name'], PATHINFO_EXTENSION));
@@ -347,9 +349,10 @@ function upFile($f, $exts, &$err, $label, $public = false)
 }
 function rmPriv($fn) { if ($fn) @unlink(__DIR__ . '/uploads/private/' . basename($fn)); }
 /** Gambar publik (foto pembicara, logo sponsor). */
-function upImage($f, &$err, $prefix = 'img', $maxMb = 2)
+function upImage($f, &$err, $prefix = 'img', $maxMb = 8, $optimize = true)
 {
     $err = '';
+    if ($f && in_array($f['error'] ?? 0, [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)) { $err = 'Gagal: file melebihi batas unggah server (upload_max_filesize = ' . ini_get('upload_max_filesize') . '). Naikkan batasnya di cPanel → MultiPHP INI Editor (mis. 16M), atau perkecil file.'; return ''; }
     if (!$f || $f['error'] !== 0 || $f['size'] > $maxMb * 1048576) { $err = 'Gagal: gunakan JPG/PNG/WEBP maksimal ' . $maxMb . ' MB.'; return ''; }
     $im = @getimagesize($f['tmp_name']);
     $ext = $im ? ([IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_WEBP => 'webp'][$im[2]] ?? null) : null;
@@ -357,7 +360,8 @@ function upImage($f, &$err, $prefix = 'img', $maxMb = 2)
     $d = __DIR__ . '/uploads/'; if (!is_dir($d)) mkdir($d, 0755, true);
     $fn = $prefix . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
     if (!move_uploaded_file($f['tmp_name'], $d . $fn)) { $err = 'Gagal menyimpan file (cek izin folder uploads).'; return ''; }
-    return $fn;
+    // perkecil & kompres otomatis (foto pembicara, logo, dll.) agar halaman ringan
+    return $optimize ? optimizeImage($d . $fn, imgMax($prefix)) : $fn;
 }
 function rmImage($fn) { if ($fn && !isurl($fn)) @unlink(__DIR__ . '/uploads/' . basename($fn)); }
 function imgSrc($v) { return isurl($v) ? $v : BASE . 'uploads/' . rawurlencode(basename((string)$v)); }

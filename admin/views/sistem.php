@@ -108,3 +108,9 @@ $icon = ['ok' => '&#10004;', 'warn' => '!', 'fail' => '&#10006;']; ?>
 <?php foreach ($bl as $b): ?><tr><td><?= e($b['name']) ?></td><td><?= number_format($b['size'] / 1024, 1, ',', '.') ?> KB</td><td><?= e(date('d M Y H:i', $b['time'])) ?></td>
 <td class="nowrap"><a href="?p=backupdl&f=<?= e(urlencode($b['name'])) ?>">Unduh</a> &nbsp; <form method="post" class="inline" data-confirm="Hapus file backup ini?"><?= csrf() ?><input type="hidden" name="a" value="backupdel"><input type="hidden" name="f" value="<?= e($b['name']) ?>"><button class="link">Hapus</button></form></td></tr><?php endforeach; ?></table></div>
 <?php else: ?><p>Belum ada file backup.</p><?php endif; ?>
+<?php $imgs = glob(__DIR__ . '/../../uploads/*.{jpg,jpeg,png,webp}', GLOB_BRACE) ?: []; $isz = 0; $bigs = 0; foreach ($imgs as $f) { $isz += filesize($f); $d = @getimagesize($f); if ($d && max($d[0], $d[1]) > 1920 && strpos($f, 'poster_') === false) $bigs++; } ?>
+<h3 id="gambar">Gambar &amp; Kecepatan</h3>
+<div class="card"><p>Total gambar publik: <b><?= count($imgs) ?></b> file, <b><?= number_format($isz / 1048576, 2, ',', '.') ?> MB</b><?= $bigs ? ' &middot; <span class="tag spam">' . $bigs . ' gambar berukuran besar</span>' : '' ?>.
+Foto pembicara, logo, dan poster yang diunggah kini otomatis diperkecil &amp; dikompres (WebP). Untuk gambar yang diunggah sebelum fitur ini, klik tombol di bawah (aman dijalankan berulang kali; poster asli tetap disimpan untuk diunduh).</p>
+<form method="post" data-confirm="Optimalkan semua gambar lama sekarang?"><?= csrf() ?><input type="hidden" name="a" value="imgopt"><button class="btn">Optimalkan Gambar</button></form></div>
+

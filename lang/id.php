@@ -49,6 +49,8 @@ return [
     'Event Poster' => 'Poster Acara',
     'View full size' => 'Lihat ukuran penuh',
     'Download Poster' => 'Unduh Poster',
+    'Show map' => 'Tampilkan peta',
+    '%s: the file exceeds the server upload limit (%s).' => '%s: file melebihi batas unggah server (%s).',
     'Category' => 'Kategori',
     'Category "%s" is only for %s attendance.' => 'Kategori "%s" hanya untuk kehadiran %s.',
     'Certificate' => 'Sertifikat',

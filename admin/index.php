@@ -199,6 +199,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $msg .= " Email terkirim ke $n dari $tot peserta.";
         }
         break;
+    case 'imgopt':
+        $back = '?p=sistem#gambar'; $up = __DIR__ . '/../uploads/'; $before = 0; $after = 0; $n = 0;
+        $opt = function ($fn, $kind, $keep = false) use ($up, &$before, &$after, &$n) {
+            if (!$fn || isurl($fn) || !is_file($up . basename($fn))) return $fn;
+            $before += filesize($up . basename($fn)); $new = optimizeImage($up . basename($fn), imgMax($kind), 82, $keep);
+            $after += filesize($up . $new); if ($new !== basename($fn)) $n++; return $new;
+        };
+        $sp = rows('speakers'); foreach ($sp as &$r) { $r = array_pad($r, 4, ''); if ($r[3] !== '') $r[3] = $opt($r[3], 'sp'); } unset($r); saveRows('speakers', $sp, 4);
+        foreach ($pdo->query("SELECT id,image FROM items WHERE kind='sponsor' AND image<>''")->fetchAll() as $it) { $new = $opt($it['image'], 'logo'); if ($new !== $it['image']) $pdo->prepare("UPDATE items SET image=? WHERE id=?")->execute([$new, $it['id']]); }
+        if (setting('logo_url') && !isurl(setting('logo_url'))) setSetting('logo_url', $opt(setting('logo_url'), 'logo'));
+        if (setting('poster') && !setting('poster_orig')) { setSetting('poster_orig', setting('poster')); setSetting('poster', $opt(setting('poster'), 'poster', true)); }
+        $msg = "Gambar dioptimalkan: $n file. Ukuran " . number_format($before / 1048576, 2, ',', '.') . ' MB → ' . number_format($after / 1048576, 2, ',', '.') . ' MB.'; break;
     case 'backuprun':
         $back = '?p=sistem#backup';
         try { $s = backupRun($pdo, 'manual', (int)setting('backup_keep', '14')); $msg = 'Backup berhasil: ' . $s['file'] . ' (' . number_format($s['size'] / 1024, 1, ',', '.') . ' KB, ' . $s['tables'] . ' tabel, ' . $s['rows'] . ' baris).'; }
@@ -253,8 +265,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         if (setting('mail_driver') === 'resend' && setting('resend_key') === '') $msg = ($msg ?? 'Pengaturan disimpan.') . ' Peringatan: Resend dipilih tetapi API key belum diisi, email tetap dikirim lewat mail() hosting.';
         if (!in_array(setting('timezone'), timezone_identifiers_list(), true)) setSetting('timezone', 'Asia/Jakarta');
-        if (!empty($_POST['poster_rm'])) { rmImage(setting('poster')); setSetting('poster', ''); }
-        if (!empty($_FILES['poster']['name'])) { $er = ''; $fn = upImage($_FILES['poster'], $er, 'poster', 8); if ($fn) { rmImage(setting('poster')); setSetting('poster', $fn); } else $msg = 'Poster: ' . $er; }
+        if (!empty($_POST['poster_rm'])) { rmImage(setting('poster')); rmImage(setting('poster_orig')); setSetting('poster', ''); setSetting('poster_orig', ''); }
+        if (!empty($_FILES['poster']['name'])) {
+            $er = ''; $fn = upImage($_FILES['poster'], $er, 'poster', 15, false);
+            if ($fn) { rmImage(setting('poster')); rmImage(setting('poster_orig')); setSetting('poster_orig', $fn); setSetting('poster', optimizeImage(__DIR__ . '/../uploads/' . $fn, imgMax('poster'), 82, true)); }
+            else $msg = 'Poster: ' . $er;
+        }
         if (!empty($_FILES['logo']['name'])) { $er = ''; $fn = upImage($_FILES['logo'], $er, 'logo'); if ($fn) { rmImage(setting('logo_url')); setSetting('logo_url', $fn); } else $msg = $er; }
         $msg = $msg ?? 'Pengaturan disimpan.'; break;
     }
