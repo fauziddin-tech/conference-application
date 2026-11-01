@@ -4,7 +4,7 @@
  * Dipakai oleh install/ (instalasi baru) dan inc.php (upgrade otomatis instalasi lama).
  * Setiap perubahan skema: naikkan DB_VERSION dan tambahkan langkahnya di migrate().
  */
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 function colExists(PDO $pdo, $t, $c)
 {
@@ -66,6 +66,9 @@ function migrate(PDO $pdo)
         'cfp_info' => '', 'cert_open' => '0', 'cert_checkin' => '1',
         'signers' => '', 'invoice_note' => '', 'organizer' => '', 'logo_url' => '',
         'blind_review' => '1', 'abs_min' => '50', 'abs_max' => '250',
+        // v3: anti-spam
+        'turnstile_site' => '', 'turnstile_secret' => '',
+        'blocked_domains' => 'fextemp.com mailinator.com guerrillamail.com guerrillamail.info sharklasers.com grr.la 10minutemail.com 10minutemail.net temp-mail.org temp-mail.io tempmail.com tempmail.net tempmailo.com tempail.com yopmail.com yopmail.net trashmail.com trashmail.de getnada.com nada.email dispostable.com maildrop.cc throwawaymail.com emailondeck.com mohmal.com fakeinbox.com mintemail.com mytemp.email tmpmail.org tmpmail.net mail.tm 1secmail.com 1secmail.org 1secmail.net mailnesia.com spamgourmet.com mailcatch.com moakt.com emailfake.com fakemail.net burnermail.io inboxkitten.com mailpoof.com tempr.email discard.email spambox.us',
     ];
     $ins = $pdo->prepare("INSERT IGNORE INTO settings(k,v) VALUES(?,?)");
     foreach ($def as $k => $v) $ins->execute([$k, $v]);

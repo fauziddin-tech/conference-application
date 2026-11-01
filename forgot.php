@@ -2,6 +2,7 @@
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $m = strtolower(post('email'));
     if (throttled('forgot:' . ip(), 5, 3600)) $err = 'Terlalu banyak permintaan. Coba lagi dalam 1 jam.';
+    elseif (!captchaOk()) $err = 'Verifikasi keamanan (captcha) gagal. Coba lagi.';
     else {
         hit('forgot:' . ip());
         $s = $pdo->prepare("SELECT * FROM users WHERE email=?"); $s->execute([$m]);
@@ -17,5 +18,5 @@ head('Lupa Password'); ?><h2>Lupa Password</h2>
 <?php if ($sent): ?><p class="msg">Jika email tersebut terdaftar, tautan untuk mengatur ulang password telah dikirim. Periksa juga folder spam. Bila tidak menerima email, hubungi panitia<?= setting('email') ? ' di ' . e(setting('email')) : '' ?>.</p>
 <?php else: ?><?php if ($err): ?><p class="msg err"><?= e($err) ?></p><?php endif; ?>
 <form method="post" class="card narrow"><?= csrf() ?><p>Masukkan email akun Anda. Kami akan mengirim tautan untuk membuat password baru.</p>
-<label>Email<input type="email" name="email" required autocomplete="email"></label><button class="btn">Kirim Tautan</button>
+<label>Email<input type="email" name="email" required autocomplete="email"></label><?= captchaHtml() ?><button class="btn">Kirim Tautan</button>
 <p><a href="login.php">Kembali ke halaman masuk</a></p></form><?php endif; foot();

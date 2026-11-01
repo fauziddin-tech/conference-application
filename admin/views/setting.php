@@ -36,6 +36,10 @@ $cb = function ($k, $l) { return '<label class="chk full"><input type="checkbox"
 <?= $ta('online_info', 'Info akses online (Meeting ID, passcode, aturan)', 3) ?>
 <h3>Dokumen &amp; Sertifikat</h3>
 <?= $ta('signers', 'Penandatangan: <code>Nama|Jabatan</code> per baris (maks. 3; baris pertama menandatangani LoA &amp; surat)', 3) ?>
+<h3>Anti-spam</h3>
+<p class="full"><small>Pendaftaran sudah otomatis menolak nama berisi tautan/simbol, email sementara, dan pengiriman form oleh bot. Untuk perlindungan terkuat, aktifkan <b>Cloudflare Turnstile</b> (gratis): Cloudflare Dashboard &rarr; Turnstile &rarr; Add widget &rarr; domain Anda &rarr; salin Site Key &amp; Secret Key ke sini. Kosongkan keduanya untuk menonaktifkan.</small></p>
+<?= $in('turnstile_site', 'Turnstile Site Key') ?><?= $in('turnstile_secret', 'Turnstile Secret Key', 'password') ?>
+<?= $ta('blocked_domains', 'Domain email yang ditolak (pisahkan dengan spasi atau baris baru)', 4) ?>
 <h3>Konten Beranda</h3>
 <?= $ta('benefits', 'Benefit (satu per baris)', 4) ?><?= $ta('supporters', 'Dukungan institusi (satu nama per baris)', 4) ?>
 <?= $ta('contacts', 'Kontak WhatsApp (<code>Nama|Nomor</code>)', 4) ?><?= $ta('secretariat', 'Sekretariat', 3) ?>

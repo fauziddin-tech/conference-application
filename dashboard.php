@@ -4,7 +4,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $a = post('a');
     if ($a === 'profile') {
         $n = post('name');
-        if ($n === '') { flash('Nama wajib diisi.'); go('dashboard.php#profil'); }
+        if (!validName($n)) { flash('Nama hanya boleh berisi huruf, spasi, titik, koma, dan tanda hubung.'); go('dashboard.php#profil'); }
         $pdo->prepare("UPDATE users SET name=?,institution=?,phone=? WHERE id=?")->execute([$n, post('institution'), post('phone'), $u['id']]);
         $pw = (string)($_POST['password'] ?? '');
         if ($pw !== '') {

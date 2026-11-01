@@ -21,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$locked && !$closed) {
         if (!in_array($att, ['Offline', 'Online'], true)) $err[] = 'Pilih jenis kehadiran (Offline/Online).';
         elseif ($feeRow && modeOf($cat) && modeOf($cat) !== $att) $err[] = 'Kategori "' . $cat . '" hanya untuk kehadiran ' . modeOf($cat) . '.';
         if ($f['full_name'] === '' || $inst === '' || $f['country'] === '' || $f['phone'] === '') $err[] = 'Nama lengkap, institusi, negara, dan nomor HP wajib diisi.';
+        if ($f['full_name'] !== '' && !validName($f['full_name'])) $err[] = 'Nama lengkap hanya boleh berisi huruf, spasi, titik, koma, dan tanda hubung.';
         if ($f['orcid'] !== '' && !preg_match('/^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/', $f['orcid'])) $err[] = 'Format ORCID iD harus 0000-0000-0000-0000.';
         if ($pres) {
             $wc = words($f['abstract']); $kw = array_filter(array_map('trim', explode(',', $f['keywords'])));

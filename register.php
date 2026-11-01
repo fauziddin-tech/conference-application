@@ -3,9 +3,9 @@ if (($u = user()) && $_SERVER['REQUEST_METHOD'] !== 'POST') go(homeFor($u));
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $n = post('name'); $m = strtolower(post('email')); $pw = (string)($_POST['password'] ?? '');
     if (!regOpen()) $err = setting('reg_close_msg');
-    elseif (post('website') !== '') $err = 'Permintaan ditolak.'; // honeypot anti-bot
-    elseif (throttled('reg:' . ip(), 10, 3600)) $err = 'Terlalu banyak pendaftaran dari jaringan Anda. Coba lagi nanti.';
+    elseif (throttled('reg:' . ip(), 5, 3600)) $err = 'Terlalu banyak pendaftaran dari jaringan Anda. Coba lagi nanti.';
     elseif ($n === '' || !filter_var($m, FILTER_VALIDATE_EMAIL)) $err = 'Nama dan email valid wajib diisi.';
+    elseif ($sp = spamCheck($n, $m)) { $err = $sp; hit('reg:' . ip()); }
     elseif (strlen($pw) < 8) $err = 'Password minimal 8 karakter.';
     else {
         $s = $pdo->prepare("SELECT id FROM users WHERE email=?"); $s->execute([$m]);
@@ -30,6 +30,6 @@ head('Daftar'); ?><h2>Buat Akun Peserta</h2>
 <label>Nama Lengkap<input name="name" required autocomplete="name" value="<?= e($_POST['name'] ?? '') ?>"></label>
 <label>Email<input type="email" name="email" required autocomplete="email" value="<?= e($_POST['email'] ?? '') ?>"></label>
 <label>Password (min. 8 karakter)<input type="password" name="password" required minlength="8" autocomplete="new-password"></label>
-<input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+<input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true"><?= captchaHtml() ?>
 <button class="btn">Buat Akun &amp; Lanjutkan</button>
 <p>Sudah punya akun? <a href="login.php">Masuk</a></p></form><?php endif; foot();

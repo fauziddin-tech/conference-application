@@ -80,7 +80,81 @@ function throttled($k, $max, $win)
     return (int)$s->fetchColumn() >= $max;
 }
 function hit($k) { global $pdo; $pdo->prepare("INSERT INTO throttle(k,ts) VALUES(?,?)")->execute([$k, time()]); }
-function ip() { return substr($_SERVER['REMOTE_ADDR'] ?? '0', 0, 45); }
+/** IP pengunjung. Di balik Cloudflare, REMOTE_ADDR adalah IP Cloudflare; gunakan CF-Connecting-IP hanya bila request benar-benar dari Cloudflare. */
+function ip()
+{
+    $r = $_SERVER['REMOTE_ADDR'] ?? '0';
+    $cf = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? '';
+    if ($cf !== '' && filter_var($cf, FILTER_VALIDATE_IP) && fromCloudflare($r)) $r = $cf;
+    return substr($r, 0, 45);
+}
+function ipInCidr($ip, $cidr)
+{
+    [$net, $bits] = explode('/', $cidr); $a = @inet_pton($ip); $b = @inet_pton($net);
+    if ($a === false || $b === false || strlen($a) !== strlen($b)) return false;
+    $bytes = intdiv((int)$bits, 8); $rem = (int)$bits % 8;
+    if (strncmp($a, $b, $bytes) !== 0) return false;
+    if ($rem === 0) return true;
+    $m = chr((0xFF << (8 - $rem)) & 0xFF);
+    return (($a[$bytes] & $m) === ($b[$bytes] & $m));
+}
+function fromCloudflare($ip)
+{
+    foreach (['173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22', '141.101.64.0/18', '108.162.192.0/18', '190.93.240.0/20', '188.114.96.0/20', '197.234.240.0/22', '198.41.128.0/17', '162.158.0.0/15', '104.16.0.0/13', '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22',
+        '2400:cb00::/32', '2606:4700::/32', '2803:f800::/32', '2405:b500::/32', '2405:8100::/32', '2a06:98c0::/29', '2c0f:f248::/32'] as $c) if (ipInCidr($ip, $c)) return true;
+    return false;
+}
+
+/* ---------- anti-spam ---------- */
+/** Nama orang: huruf (semua bahasa), spasi, titik, koma, apostrof, tanda hubung, kurung. Tanpa URL, angka, atau simbol. */
+function validName($n)
+{
+    $n = trim((string)$n);
+    return (bool)preg_match("/^[\p{L}\p{M}][\p{L}\p{M}\s.,'’\-()]{1,119}$/u", $n) && !preg_match('#https?|www\.|\.(com|ru|net|org|xyz|top|info)\b#i', $n);
+}
+/** Domain email sekali pakai / diblokir (diatur di Pengaturan). */
+function blockedEmail($m)
+{
+    $d = strtolower((string)substr(strrchr((string)$m, '@'), 1));
+    foreach (preg_split('/[\s,;]+/', strtolower(setting('blocked_domains'))) as $b) {
+        $b = trim($b); if ($b === '') continue;
+        if ($d === $b || substr($d, -strlen($b) - 1) === '.' . $b) return true;
+    }
+    return false;
+}
+function captchaOn() { return setting('turnstile_site') !== '' && setting('turnstile_secret') !== ''; }
+function captchaHtml() { return captchaOn() ? '<div class="cf-turnstile full" data-sitekey="' . e(setting('turnstile_site')) . '"></div>' : ''; }
+/** Verifikasi Cloudflare Turnstile di server. */
+function captchaOk()
+{
+    if (!captchaOn()) return true;
+    $resp = (string)($_POST['cf-turnstile-response'] ?? '');
+    if ($resp === '') return false;
+    $data = http_build_query(['secret' => setting('turnstile_secret'), 'response' => $resp, 'remoteip' => ip()]);
+    $url = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'; $out = false;
+    if (function_exists('curl_init')) {
+        $c = curl_init($url);
+        curl_setopt_array($c, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => $data, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 8]);
+        $out = curl_exec($c); curl_close($c);
+    } else {
+        $out = @file_get_contents($url, false, stream_context_create(['http' => ['method' => 'POST', 'header' => "Content-Type: application/x-www-form-urlencoded\r\n", 'content' => $data, 'timeout' => 8]]));
+    }
+    $j = json_decode((string)$out, true);
+    return !empty($j['success']);
+}
+/** Bot biasanya mengirim form dalam < 3 detik setelah halaman dimuat. */
+function formStamp() { $_SESSION['ft'] = time(); }
+function tooFast() { return time() - (int)($_SESSION['ft'] ?? 0) < 3; }
+/** Pemeriksaan pendaftaran akun; mengembalikan pesan error atau ''. */
+function spamCheck($name, $email)
+{
+    if (post('website') !== '') return 'Permintaan ditolak.';
+    if (tooFast()) return 'Formulir dikirim terlalu cepat. Tunggu beberapa detik lalu coba lagi.';
+    if (!validName($name)) return 'Nama hanya boleh berisi huruf, spasi, titik, koma, dan tanda hubung (tanpa angka, tautan, atau simbol).';
+    if (blockedEmail($email)) return 'Gunakan alamat email institusi atau email pribadi permanen (email sementara tidak diterima).';
+    if (!captchaOk()) return 'Verifikasi keamanan (captcha) gagal. Muat ulang halaman lalu coba lagi.';
+    return '';
+}
 
 /* ---------- email ---------- */
 function sendMail($to, $subject, $body)
@@ -193,6 +267,7 @@ function csvOut($name, $head, $rows)
 function head($t, $extra = '')
 {
     $u = user(); $H = BASE; $desc = setting('tagline') ?: setting('name');
+    if (!$u) { formStamp(); if (captchaOn()) $extra .= '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>'; }
     ?><!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title><?= e($t) ?> - <?= e(brand()) ?></title>
 <meta name="description" content="<?= e(mb_substr($desc, 0, 300)) ?>">
@@ -212,7 +287,7 @@ function head($t, $extra = '')
 <label>Nama Lengkap<input name="name" required autocomplete="name"></label>
 <label>Email<input type="email" name="email" required autocomplete="email"></label>
 <label>Password (min. 8 karakter)<input type="password" name="password" required minlength="8" autocomplete="new-password"></label>
-<input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+<input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true"><?= captchaHtml() ?>
 <button class="btn">Buat Akun &amp; Lanjutkan</button><p><small>Sudah punya akun? <a href="<?= $H ?>login.php">Masuk</a></small></p></form></div></div><?php endif; ?><main id="main">
 <?php if ($f = flash()): ?><p class="msg" role="status"><?= e($f) ?></p><?php endif;
 }
@@ -238,7 +313,7 @@ m.addEventListener('click',function(e){if(e.target===m)m.hidden=true});
 document.addEventListener('keydown',function(e){if(e.key==='Escape')m.hidden=true});
 var f=m.querySelector('form'),er=m.querySelector('.merr');
 f.addEventListener('submit',function(e){e.preventDefault();er.hidden=true;var b=f.querySelector('button.btn');b.disabled=true;
-fetch(f.action,{method:'POST',body:new FormData(f),headers:{'X-Requested-With':'fetch'},credentials:'same-origin'}).then(function(r){return r.json()}).then(function(j){if(j.ok){location.href=j.to}else{er.textContent=j.error||'Gagal membuat akun.';er.hidden=false;b.disabled=false}}).catch(function(){er.textContent='Terjadi kesalahan. Muat ulang halaman lalu coba lagi.';er.hidden=false;b.disabled=false})})})();</script></body></html><?php
+fetch(f.action,{method:'POST',body:new FormData(f),headers:{'X-Requested-With':'fetch'},credentials:'same-origin'}).then(function(r){return r.json()}).then(function(j){if(j.ok){location.href=j.to}else{er.textContent=j.error||'Gagal membuat akun.';er.hidden=false;b.disabled=false;if(window.turnstile)turnstile.reset()}}).catch(function(){er.textContent='Terjadi kesalahan. Muat ulang halaman lalu coba lagi.';er.hidden=false;b.disabled=false})})})();</script></body></html><?php
 }
 
 /** Jadwal acara, dikelompokkan per hari dengan tab. */

@@ -199,3 +199,4 @@ ul.plain{list-style:none;padding:0;margin:0}ul.plain li{padding:6px 0;border-bot
 form.settings>h3{margin:18px 0 4px;padding-top:10px;border-top:1px solid var(--line)}form.settings>h3:first-of-type{border:0;margin-top:0}
 form.card>.chk{grid-column:1/-1}
 @media print{nav,footer,.totop,.skip{display:none}}
+.tag.spam{background:#b42323;color:#fff}.cf-turnstile{margin:6px 0 10px}

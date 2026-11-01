@@ -55,6 +55,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare("DELETE FROM registrations WHERE user_id=?")->execute([$id]);
         $pdo->prepare("DELETE FROM users WHERE id=? AND role IN('peserta','reviewer')")->execute([$id]);
         $msg = 'Akun dihapus.'; break;
+    case 'spamclean': // hapus akun peserta mencurigakan yang belum mengisi formulir
+        $n = 0;
+        foreach ($pdo->query("SELECT u.id,u.name,u.email FROM users u WHERE u.role='peserta' AND NOT EXISTS(SELECT 1 FROM registrations r WHERE r.user_id=u.id)")->fetchAll() as $s)
+            if (!validName($s['name']) || blockedEmail($s['email'])) { $pdo->prepare("DELETE FROM users WHERE id=?")->execute([$s['id']]); $n++; }
+        $msg = "$n akun mencurigakan dihapus."; $back = '?p=pengguna'; break;
     case 'uadd': // akun reviewer / admin baru
         $n = post('name'); $m = strtolower(post('email')); $role = in_array(post('role'), ['reviewer', 'admin'], true) ? post('role') : 'reviewer';
         $q = $pdo->prepare("SELECT id FROM users WHERE email=?"); $q->execute([$m]);
@@ -178,7 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach (audienceRows($aud) as $r) { $tot++; $n += sendMail($r['email'], '[' . brand() . '] ' . $sub, strtr($body, ['{name}' => $r['name'], '{regno}' => $r['regno'], '{email}' => $r['email']]) . "\n\n--\n" . setting('name') . "\n" . absUrl()) ? 1 : 0; }
         $msg = "Email terkirim: $n dari $tot penerima."; break;
     case 'set':
-        foreach (['name', 'tagline', 'organizer', 'date', 'time', 'event_start', 'event_end', 'timezone', 'location', 'venue_info', 'venue_url', 'map_url', 'website', 'email', 'mail_from', 'logo_url', 'submission_url', 'about', 'cfp_info', 'fees', 'early_deadline', 'payment_info', 'invoice_note', 'supporters', 'benefits', 'contacts', 'secretariat', 'online_link', 'online_info', 'signers', 'abs_min', 'abs_max', 'reg_close_msg'] as $k)
+        foreach (['name', 'tagline', 'organizer', 'date', 'time', 'event_start', 'event_end', 'timezone', 'location', 'venue_info', 'venue_url', 'map_url', 'website', 'email', 'mail_from', 'logo_url', 'submission_url', 'about', 'cfp_info', 'fees', 'early_deadline', 'payment_info', 'invoice_note', 'supporters', 'benefits', 'contacts', 'secretariat', 'online_link', 'online_info', 'signers', 'abs_min', 'abs_max', 'reg_close_msg', 'turnstile_site', 'turnstile_secret', 'blocked_domains'] as $k)
             if (isset($_POST[$k])) setSetting($k, trim((string)$_POST[$k]));
         foreach (['reg_open', 'cert_open', 'cert_checkin', 'blind_review'] as $k) setSetting($k, empty($_POST[$k]) ? '0' : '1');
         if (!in_array(setting('timezone'), timezone_identifiers_list(), true)) setSetting('timezone', 'Asia/Jakarta');
