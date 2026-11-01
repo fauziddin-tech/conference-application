@@ -71,22 +71,16 @@ function contentStrings()
     return $u;
 }
 /**
- * Terjemahkan banyak teks sekaligus ke $to. Mengembalikan daftar [teks, bahasa sumber] sesuai urutan, atau null + $err.
- * Memakai Google Cloud Translation (resmi) bila API key diisi di Pengaturan; selain itu endpoint gratis Google Translate.
+ * Terjemahkan banyak teks sekaligus ke $to memakai Google Translate (endpoint gratis, tanpa API key).
+ * Mengembalikan daftar [teks, bahasa sumber] sesuai urutan, atau null + $err.
  */
 function gtranslateBatch(array $texts, $to, &$err)
 {
     $err = '';
     if (!$texts) return [];
     if (!function_exists('curl_init')) { $err = 'Ekstensi cURL tidak aktif.'; return null; }
-    $key = setting('translate_key');
-    if ($key !== '') {
-        $url = 'https://translation.googleapis.com/language/translate/v2?key=' . rawurlencode($key);
-        $body = 'target=' . $to . '&format=text';
-    } else {
-        $url = (defined('TRANSLATE_API') ? TRANSLATE_API : 'https://translate.googleapis.com/translate_a/t') . '?client=gtx&dj=1&sl=auto&tl=' . $to;
-        $body = '';
-    }
+    $url = (defined('TRANSLATE_API') ? TRANSLATE_API : 'https://translate.googleapis.com/translate_a/t') . '?client=gtx&dj=1&sl=auto&tl=' . $to;
+    $body = '';
     foreach ($texts as $t) $body .= ($body === '' ? '' : '&') . 'q=' . rawurlencode($t);
     $c = curl_init($url);
     curl_setopt_array($c, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => $body, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 25, CURLOPT_CONNECTTIMEOUT => 6,
@@ -94,16 +88,11 @@ function gtranslateBatch(array $texts, $to, &$err)
     $raw = curl_exec($c); $code = (int)curl_getinfo($c, CURLINFO_HTTP_CODE); $ce = curl_error($c); curl_close($c);
     if ($raw === false) { $err = 'Koneksi ke layanan terjemahan gagal: ' . $ce; return null; }
     $j = json_decode((string)$raw, true);
-    if ($key !== '') {
-        if ($code !== 200 || !isset($j['data']['translations'])) { $err = 'Google Cloud Translation: ' . ($j['error']['message'] ?? 'HTTP ' . $code); return null; }
-        $out = []; foreach ($j['data']['translations'] as $tr) $out[] = [html_entity_decode((string)$tr['translatedText'], ENT_QUOTES, 'UTF-8'), (string)($tr['detectedSourceLanguage'] ?? '')];
-    } else {
-        if (in_array($code, [302, 403, 429], true)) { $err = 'Google Translate sedang membatasi permintaan (HTTP ' . $code . '). Coba lagi beberapa menit lagi, atau isi API key Google Cloud Translation di tab Terjemahan.'; return null; }
-        if ($code !== 200 || !is_array($j)) { $err = 'Layanan terjemahan menolak permintaan (HTTP ' . $code . ').'; return null; }
-        // satu teks: ["hasil","id"] ; banyak teks: [["hasil","id"], ...]
-        if (count($texts) === 1 && isset($j[0]) && is_string($j[0])) $j = [$j];
-        $out = []; foreach ($j as $r) $out[] = is_array($r) ? [(string)($r[0] ?? ''), (string)($r[1] ?? '')] : [(string)$r, ''];
-    }
+    if (in_array($code, [302, 403, 429], true)) { $err = 'Google Translate sedang membatasi permintaan (HTTP ' . $code . '). Coba lagi beberapa menit lagi.'; return null; }
+    if ($code !== 200 || !is_array($j)) { $err = 'Layanan terjemahan menolak permintaan (HTTP ' . $code . ').'; return null; }
+    // satu teks: ["hasil","id"] ; banyak teks: [["hasil","id"], ...]
+    if (count($texts) === 1 && isset($j[0]) && is_string($j[0])) $j = [$j];
+    $out = []; foreach ($j as $r) $out[] = is_array($r) ? [(string)($r[0] ?? ''), (string)($r[1] ?? '')] : [(string)$r, ''];
     if (count($out) !== count($texts)) { $err = 'Jumlah hasil terjemahan tidak sesuai.'; return null; }
     return $out;
 }

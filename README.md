@@ -87,7 +87,7 @@ Hosting harus mengaktifkan ekstensi PHP **cURL**.
 - Konten yang ditulis admin (Tentang, Tanggal Penting, Topik, FAQ, Pengumuman, Agenda, peran pembicara, kategori biaya, dll.)
   **diterjemahkan otomatis** ke EN dan ID saat disimpan (Google Translate, dikirim per batch) dan disimpan di cache —
   tidak memperlambat halaman. Nama orang, nama konferensi, tema, dan lokasi tidak diterjemahkan.
-- Admin → **Terjemahan**: status, terjemahkan ulang, koreksi manual (tidak ditimpa), dan opsi API key Google Cloud Translation resmi.
+- Admin → **Terjemahan**: status, terjemahkan ulang, dan koreksi manual (tidak ditimpa). Tidak perlu API key.
 - Dokumen resmi (sertifikat, LoA, invoice, surat undangan) selalu berbahasa Inggris dan memakai versi Inggris dari konten admin.
 - Panel admin tetap berbahasa Indonesia.
 

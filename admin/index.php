@@ -212,9 +212,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     case 'trrun': case 'trforce':
         $back = '?p=terjemahan'; $r = translateMissing(45, $a === 'trforce'); if ($a === 'trforce') translationsPrune();
         $msg = 'Diterjemahkan: ' . $r['done'] . ' teks.' . ($r['left'] ? ' Tersisa ' . $r['left'] . ' teks — klik lagi untuk melanjutkan.' : '') . ($r['error'] ? ' Error: ' . $r['error'] : ''); break;
-    case 'trkey':
-        $back = '?p=terjemahan'; setSetting('translate_key', post('translate_key'));
-        $msg = post('translate_key') !== '' ? 'API key Google Cloud Translation disimpan.' : 'API key dihapus; memakai endpoint gratis.'; break;
     case 'trauto':
         $back = '?p=terjemahan'; setSetting('auto_translate', setting('auto_translate', '1') === '1' ? '0' : '1');
         $msg = 'Terjemahan otomatis ' . (setting('auto_translate') === '1' ? 'diaktifkan.' : 'dinonaktifkan.'); break;
