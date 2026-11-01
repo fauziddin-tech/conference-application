@@ -225,3 +225,10 @@ nav a.bell .bl{display:none}
 .checks i{flex:none;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:800 .75rem system-ui,sans-serif;font-style:normal;color:#fff;margin-top:2px}
 .checks .ok i{background:#1f7a3a}.checks .warn i{background:#c77d1a}.checks .fail i{background:#b42323}.checks small{opacity:.85}
 pre.cmd{background:var(--deep);color:#f1e9d8;padding:10px 12px;border-radius:8px;overflow-x:auto;font-size:.85rem;white-space:pre-wrap;word-break:break-all}
+/* ===== v6: popup pratinjau dokumen ===== */
+.docm{padding:12px}.dbox{background:var(--card);border-radius:14px;width:min(1180px,100%);height:min(92vh,100%);display:flex;flex-direction:column;overflow:hidden;border-top:5px solid var(--tan);box-shadow:0 10px 40px #0006}
+.dbar{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap;font-family:system-ui,sans-serif}
+.dbar span{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.dbar .btn{padding:7px 14px;font-size:.88rem}.dbar .mx{position:static;font-size:1.8rem;line-height:1;padding:0 6px}
+.docm iframe{flex:1;width:100%;border:0;background:#e9e6df}
+.previews{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.previews .btn{padding:8px 14px;font-size:.9rem}
+.certbox{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}

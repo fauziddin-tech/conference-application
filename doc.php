@@ -1,21 +1,50 @@
-<?php require 'inc.php'; $u = need(['peserta', 'admin']);
-/* Dokumen siap cetak / simpan PDF (Ctrl+P): invoice, receipt, loa, invitation, badge, cert */
+<?php require 'inc.php'; $u = need(['peserta', 'admin', 'reviewer']);
+/* Dokumen siap cetak / simpan PDF (Ctrl+P): invoice, receipt, loa, invitation, badge, cert, revcert (sertifikat reviewer).
+ * Admin dapat membuka pratinjau dengan data contoh: ?t=cert&preview=participant|presenter|reviewer[&signers=...] */
 $t = (string)($_GET['t'] ?? '');
-if ($u['role'] === 'admin') { $q = $pdo->prepare("SELECT * FROM registrations WHERE id=?"); $q->execute([(int)($_GET['id'] ?? 0)]); $R = $q->fetch(); }
-else $R = regOf($u['id']);
-if (!$R) { http_response_code(404); die('Data pendaftaran tidak ditemukan.'); }
-$q = $pdo->prepare("SELECT * FROM users WHERE id=?"); $q->execute([$R['user_id']]); $P = $q->fetch();
-$pres = (bool)$R['article_title']; $ver = $R['pay_status'] === 'verified';
-$allowed = ['invoice' => true, 'receipt' => $ver, 'badge' => $ver, 'invitation' => $ver, 'loa' => $pres && $R['paper_status'] === 'accepted', 'cert' => certReady($R)];
-if (!isset($allowed[$t])) { http_response_code(404); die('Dokumen tidak dikenal.'); }
-if (!$allowed[$t] && $u['role'] !== 'admin') { http_response_code(403); die('Dokumen belum tersedia untuk status pendaftaran Anda.'); }
-
-$name = trim($R['prefix'] === 'Other' ? $R['full_name'] : $R['prefix'] . ' ' . $R['full_name']);
-$signers = rows('signers'); $s1 = $signers[0] ?? [setting('organizer') ?: 'Organizing Committee', 'Chairman of the Committee'];
-$verifyUrl = absUrl('verify.php?c=' . $R['ticket']);
+$preview = $u['role'] === 'admin' ? preg_replace('/[^a-z]/', '', (string)($_GET['preview'] ?? '')) : '';
+if ($preview && !in_array($preview, ['participant', 'presenter', 'reviewer'], true)) $preview = '';
+$rowsText = function ($txt) { $o = []; foreach (preg_split('/\R/', (string)$txt) as $l) { $l = trim($l); if ($l !== '') $o[] = array_map('trim', explode('|', $l)); } return $o; };
+$signers = $preview && isset($_GET['signers']) ? $rowsText(mb_substr((string)$_GET['signers'], 0, 1000)) : rows('signers');
+$s1 = $signers[0] ?? [setting('organizer') ?: 'Organizing Committee', 'Chairman of the Committee'];
+$RV = null; $nrev = 0; $R = null; $P = null;
+if ($preview) {
+    // data contoh untuk pratinjau (tidak tersimpan di database)
+    $R = ['id' => 1, 'user_id' => 0, 'prefix' => 'Dr.', 'full_name' => 'Jane Doe', 'country' => 'Indonesia', 'phone' => '-', 'category' => $preview === 'presenter' ? 'Offline Presenter' : 'Offline Participant', 'attendance' => 'Offline',
+        'article_title' => $preview === 'presenter' ? 'Reimagining Classroom Learning with Artificial Intelligence: A Mixed-Methods Study' : '', 'paper_status' => 'accepted', 'pay_status' => 'verified', 'ticket' => 'PREVIEW00001',
+        'track' => '', 'coauthors' => '', 'pay_amount' => '-', 'pay_date' => date('Y-m-d'), 'pay_sender' => '', 'created_at' => date('Y-m-d H:i:s'), 'updated_at' => date('Y-m-d H:i:s'), 'checked_in_at' => date('Y-m-d H:i:s'), 'review_round' => 1];
+    $P = ['institution' => 'Universitas Contoh', 'email' => 'jane.doe@example.com'];
+    if ($preview === 'reviewer') { $t = 'revcert'; $RV = ['id' => 0, 'name' => 'Prof. Dr. John Smith, M.Ed.', 'institution' => 'Universitas Contoh', 'cert_code' => 'RVPREVIEW001']; $nrev = 3; }
+    else $t = 'cert';
+} elseif ($t === 'revcert') {
+    if ($u['role'] === 'reviewer') $RV = $u;
+    elseif ($u['role'] === 'admin') { $q = $pdo->prepare("SELECT * FROM users WHERE id=? AND role='reviewer'"); $q->execute([(int)($_GET['uid'] ?? 0)]); $RV = $q->fetch() ?: null; }
+    if (!$RV) { http_response_code(404); die('Reviewer tidak ditemukan.'); }
+    $nrev = reviewerDone($RV['id']);
+    if ($u['role'] !== 'admin' && !reviewerCertReady($RV['id'])) { http_response_code(403); die('Sertifikat reviewer tersedia setelah Anda mengirim minimal satu review dan panitia membuka sertifikat reviewer.'); }
+    if (empty($RV['cert_code'])) { $RV['cert_code'] = 'RV' . substr(newTicket(), 0, 10); $pdo->prepare("UPDATE users SET cert_code=? WHERE id=?")->execute([$RV['cert_code'], $RV['id']]); }
+} else {
+    if ($u['role'] === 'reviewer') { http_response_code(403); die('Akses ditolak'); }
+    if ($u['role'] === 'admin') { $q = $pdo->prepare("SELECT * FROM registrations WHERE id=?"); $q->execute([(int)($_GET['id'] ?? 0)]); $R = $q->fetch(); }
+    else $R = regOf($u['id']);
+    if (!$R) { http_response_code(404); die('Data pendaftaran tidak ditemukan.'); }
+    $q = $pdo->prepare("SELECT * FROM users WHERE id=?"); $q->execute([$R['user_id']]); $P = $q->fetch();
+}
+$titles = ['invoice' => 'Invoice', 'receipt' => 'Payment Receipt', 'loa' => 'Letter of Acceptance', 'invitation' => 'Invitation Letter', 'badge' => 'E-Ticket & Name Badge', 'cert' => 'Certificate', 'revcert' => 'Reviewer Certificate'];
+if ($t === 'revcert') {
+    $name = $RV['name']; $verifyUrl = absUrl('verify.php?c=' . $RV['cert_code']); $ref = no('RV', $RV['id']); $pres = false;
+    $back = $u['role'] === 'admin' ? ($preview ? 'admin/?p=setting#sertifikat' : 'admin/?p=pengguna&role=reviewer') : 'reviewer.php';
+} else {
+    $pres = (bool)$R['article_title']; $ver = $R['pay_status'] === 'verified';
+    $allowed = ['invoice' => true, 'receipt' => $ver, 'badge' => $ver, 'invitation' => $ver, 'loa' => $pres && $R['paper_status'] === 'accepted', 'cert' => $preview || certReady($R)];
+    if (!isset($allowed[$t])) { http_response_code(404); die('Dokumen tidak dikenal.'); }
+    if (!$allowed[$t] && $u['role'] !== 'admin') { http_response_code(403); die('Dokumen belum tersedia untuk status pendaftaran Anda.'); }
+    $name = trim($R['prefix'] === 'Other' ? $R['full_name'] : $R['prefix'] . ' ' . $R['full_name']);
+    $verifyUrl = absUrl('verify.php?c=' . $R['ticket']);
+    $ref = no('R', $R['id']);
+    $back = $u['role'] === 'admin' ? ($preview ? 'admin/?p=setting#sertifikat' : 'admin/?p=detail&id=' . $R['id']) : 'dashboard.php';
+}
 $today = fdateEn(date('Y-m-d'));
-$ref = no('R', $R['id']);
-$titles = ['invoice' => 'Invoice', 'receipt' => 'Payment Receipt', 'loa' => 'Letter of Acceptance', 'invitation' => 'Invitation Letter', 'badge' => 'E-Ticket & Name Badge', 'cert' => 'Certificate'];
 function letterhead() { ?><header class="lh"><?php if (setting('logo_url')): ?><img src="<?= e(imgSrc(setting('logo_url'))) ?>" alt=""><?php endif; ?><div><b><?= e(setting('name')) ?></b><?php if (setting('organizer')): ?><br><?= e(setting('organizer')) ?><?php endif; ?><br><small><?= e(setting('secretariat')) ?><?= setting('email') ? ' · ' . e(setting('email')) : '' ?><?= setting('website') ? ' · ' . e(setting('website')) : '' ?></small></div></header><?php }
 function sign($s, $date = true) { ?><div class="sign"><?php if ($date): ?><p><?= e(fdateEn(date('Y-m-d'))) ?></p><?php endif; ?><p><?= e($s[1] ?? '') ?>,</p><div class="sp"></div><p><b><u><?= e($s[0] ?? '') ?></u></b></p></div><?php }
 ?><!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?= e($titles[$t] . ' ' . $ref . ' - ' . brand()) ?></title>
@@ -47,10 +76,14 @@ table{width:100%;border-collapse:collapse;margin:16px 0}th,td{border:1px solid #
 .cert .signs{display:flex;gap:20mm;justify-content:center;margin-top:auto}.cert .signs div{min-width:60mm}.cert .signs .sp{height:18mm}
 .cert .qr{position:absolute;left:12mm;bottom:10mm;width:26mm;height:26mm}.cert .no{position:absolute;right:12mm;bottom:10mm;font:12px system-ui,sans-serif;color:#555}
 .cert .lg{height:22mm}
-@media print{body{background:#fff}.bar{display:none}.page{margin:0;box-shadow:none;width:auto;min-height:auto}@page{size:A4 <?= $t === 'cert' ? 'landscape' : 'portrait' ?>;margin:0}}
+.cert .frame{padding-bottom:36mm}.cert .signs{margin-top:auto;padding-top:6mm}.cert .signs p{margin:0}.cert .no{text-align:right;line-height:1.4}
+.wm{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:5}.wm span{font:800 clamp(60px,12vw,150px) system-ui,sans-serif;letter-spacing:.08em;color:rgba(180,35,35,.13);transform:rotate(-22deg)}
+body.embed .bar{display:none}body.embed .page{margin:12px auto}
+.cert .award{font:italic 1.05rem Georgia,serif;color:#444;max-width:205mm}
+@media print{body{background:#fff}.bar{display:none}.page{margin:0;box-shadow:none;width:auto;min-height:auto}@page{size:A4 <?= in_array($t, ['cert', 'revcert'], true) ? 'landscape' : 'portrait' ?>;margin:0}}
 @media (max-width:820px){.page{width:100%;min-height:0;padding:16px;margin:0}.cert .frame{padding:8mm}}
 </style></head><body>
-<div class="bar"><span><?= e($titles[$t]) ?> &middot; <?= e($ref) ?></span><span><button onclick="window.print()">Cetak / Simpan PDF</button> <a href="<?= $u['role'] === 'admin' ? 'admin/?p=detail&id=' . $R['id'] : 'dashboard.php' ?>">Kembali</a></span></div>
+<div class="bar"><span><?= e($titles[$t]) ?> &middot; <?= $preview ? 'PRATINJAU (data contoh)' : e($ref) ?></span><span><button onclick="window.print()">Cetak / Simpan PDF</button> <a class="back" href="<?= e(BASE . $back) ?>">Kembali</a></span></div>
 
 <?php if ($t === 'invoice' || $t === 'receipt'): $paid = $ver; ?>
 <div class="page"><?php letterhead(); ?>
@@ -112,8 +145,18 @@ table{width:100%;border-collapse:collapse;margin:16px 0}th,td{border:1px solid #
 <p style="max-width:200mm">has <?= $role === 'Presenter' ? 'presented the paper entitled <b>&ldquo;' . e($R['article_title']) . '&rdquo;</b>' : 'participated' ?> as a <b><?= $role ?></b><?= $R['attendance'] === 'Online' ? ' (online)' : '' ?> in the<br><b><?= e(setting('name')) ?></b><br><?= e(setting('tagline')) ?><br>held on <?= e(setting('date')) ?> at <?= e(setting('location')) ?>.</p>
 <div class="signs"><?php foreach (array_slice($signers ?: [$s1], 0, 3) as $s): ?><div><p><?= e($s[1] ?? '') ?></p><div class="sp"></div><p><b><u><?= e($s[0]) ?></u></b></p></div><?php endforeach; ?></div>
 <div class="qr" data-qr="<?= e($verifyUrl) ?>"></div><div class="no">No. CERT/<?= e(brand()) ?>/<?= e($ref) ?><br>Verify: <?= e($verifyUrl) ?></div></div></div>
-<?php endif; ?>
 
+<?php elseif ($t === 'revcert'): ?>
+<div class="page cert"><div class="frame"><?php if (setting('logo_url')): ?><img class="lg" src="<?= e(imgSrc(setting('logo_url'))) ?>" alt=""><?php endif; ?>
+<h1>CERTIFICATE</h1><h2>of Appreciation</h2>
+<p>This certificate is proudly presented to</p><div class="who"><?= e($name) ?></div><p><?= e($RV['institution']) ?></p>
+<p class="award">in recognition of the valuable contribution as a <b>Reviewer</b><?= $nrev ? ', having reviewed <b>' . $nrev . ' manuscript' . ($nrev > 1 ? 's' : '') . '</b>' : '' ?>, for the<br><b><?= e(setting('name')) ?></b><br><?= e(setting('tagline')) ?><br>held on <?= e(setting('date')) ?> at <?= e(setting('location')) ?>.</p>
+<div class="signs"><?php foreach (array_slice($signers ?: [$s1], 0, 3) as $s): ?><div><p><?= e($s[1] ?? '') ?></p><div class="sp"></div><p><b><u><?= e($s[0]) ?></u></b></p></div><?php endforeach; ?></div>
+<div class="qr" data-qr="<?= e($verifyUrl) ?>"></div><div class="no">No. CERT/<?= e(brand()) ?>/<?= e($ref) ?><br>Verify: <?= e($verifyUrl) ?></div></div></div>
+<?php endif; ?>
+<?php if ($preview): ?><div class="wm" aria-hidden="true"><span>PRATINJAU</span></div><?php endif; ?>
+
+<script>if(window.self!==window.top)document.body.classList.add('embed');</script>
 <script src="<?= BASE ?>assets/qrcode.min.js"></script>
 <script>document.querySelectorAll('[data-qr]').forEach(function(el){if(window.QRCode){new QRCode(el,{text:el.dataset.qr,width:256,height:256,correctLevel:QRCode.CorrectLevel.M})}else{el.textContent=el.dataset.qr;el.style.fontSize='9px';el.style.wordBreak='break-all'}});</script>
 </body></html>

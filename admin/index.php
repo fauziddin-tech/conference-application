@@ -221,7 +221,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     case 'set':
         foreach (['name', 'tagline', 'organizer', 'date', 'time', 'event_start', 'event_end', 'timezone', 'location', 'venue_info', 'venue_url', 'map_url', 'website', 'email', 'mail_from', 'logo_url', 'submission_url', 'about', 'cfp_info', 'fees', 'early_deadline', 'payment_info', 'invoice_note', 'supporters', 'benefits', 'contacts', 'secretariat', 'online_link', 'online_info', 'signers', 'abs_min', 'abs_max', 'reg_close_msg', 'turnstile_site', 'turnstile_secret', 'blocked_domains', 'mail_from_name'] as $k)
             if (isset($_POST[$k])) setSetting($k, trim((string)$_POST[$k]));
-        foreach (['reg_open', 'cert_open', 'cert_checkin', 'blind_review', 'paper_word_only'] as $k) setSetting($k, empty($_POST[$k]) ? '0' : '1');
+        foreach (['reg_open', 'cert_open', 'cert_checkin', 'blind_review', 'paper_word_only', 'cert_reviewer'] as $k) setSetting($k, empty($_POST[$k]) ? '0' : '1');
         if (isset($_POST['review_days'])) setSetting('review_days', (string)max(1, min(90, (int)$_POST['review_days'])));
         if (isset($_POST['mail_driver'])) setSetting('mail_driver', post('mail_driver') === 'resend' ? 'resend' : 'mail');
         if (!empty($_POST['resend_key_clear'])) setSetting('resend_key', '');

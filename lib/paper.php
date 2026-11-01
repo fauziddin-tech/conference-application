@@ -110,3 +110,14 @@ function paperHistory($R, $view, $reviewerId = null)
     foreach ($files as $f) if ($f['kind'] === 'camera') echo '<div class="hv final"><span class="vtag">final</span> <a href="' . $base . 'file.php?pf=' . (int)$f['id'] . '">' . e($f['name']) . '</a> <small>camera-ready &middot; ' . e(date('d M Y H:i', strtotime($f['created_at']))) . '</small></div>';
     echo '</div>';
 }
+
+/* ---------- sertifikat reviewer ---------- */
+/** Jumlah naskah berbeda yang sudah direview (minimal satu review terkirim). */
+function reviewerDone($uid)
+{
+    global $pdo;
+    $q = $pdo->prepare("SELECT COUNT(DISTINCT reg_id) FROM reviews WHERE reviewer_id=? AND submitted_at IS NOT NULL"); $q->execute([$uid]);
+    return (int)$q->fetchColumn();
+}
+function reviewerCertReady($uid) { return setting('cert_reviewer', '1') === '1' && reviewerDone($uid) > 0; }
+

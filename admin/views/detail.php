@@ -13,7 +13,7 @@ $info = ['Title' => e($x['prefix']), 'Nama lengkap' => e($x['full_name']), 'Emai
 if (!$x['article_title']) foreach (['Track', 'Judul artikel', 'Co-authors', 'Keywords', 'Abstract', 'File naskah', 'Camera-ready'] as $k) unset($info[$k]); ?>
 <p><a href="?p=peserta">&larr; Kembali ke daftar peserta</a> &middot; <a href="?p=edit&id=<?= $x['user_id'] ?>">Edit akun / reset password</a></p>
 <h3><?= no('R', $x['id']) ?> &middot; <?= e($x['prefix'] . ' ' . $x['full_name']) ?></h3>
-<p class="docs-inline">Dokumen: <?php foreach (['invoice' => 'Invoice', 'receipt' => 'Kwitansi', 'badge' => 'Badge', 'invitation' => 'Undangan', 'loa' => 'LoA', 'cert' => 'Sertifikat'] as $k => $l): ?><a href="../doc.php?t=<?= $k ?>&id=<?= $x['id'] ?>" target="_blank"><?= $l ?></a> <?php endforeach; ?><small>(admin dapat melihat semua dokumen untuk pratinjau)</small></p>
+<p class="docs-inline">Dokumen: <?php foreach (['invoice' => 'Invoice', 'receipt' => 'Kwitansi', 'badge' => 'Badge', 'invitation' => 'Undangan', 'loa' => 'LoA', 'cert' => 'Sertifikat'] as $k => $l): ?><a class="js-doc" data-title="<?= $l ?> · <?= no('R', $x['id']) ?>" href="../doc.php?t=<?= $k ?>&id=<?= $x['id'] ?>" target="_blank"><?= $l ?></a> <?php endforeach; ?><small>(admin dapat melihat semua dokumen untuk pratinjau)</small></p>
 <div class="scroll"><table><?php foreach ($info as $k => $v): ?><tr><th style="width:220px"><?= e($k) ?></th><td><?= $v ?></td></tr><?php endforeach; ?></table></div>
 
 <?php if ($x['article_title']):

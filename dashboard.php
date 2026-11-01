@@ -82,12 +82,12 @@ $st[] = ['Sertifikat', certReady($R) ? 'done' : '', certReady($R) ? 'Siap diundu
 <?php if (!$verified): ?><a class="btn" href="registrasi.php"><?= in_array($R['pay_status'], ['unpaid', 'rejected'], true) ? 'Unggah Bukti Bayar / Ubah Data' : 'Ubah Data Pendaftaran' ?></a><?php endif; ?></div>
 
 <div class="panel"><h3>Dokumen</h3><ul class="docs">
-<li><a href="doc.php?t=invoice" target="_blank">Invoice</a></li>
-<?php if ($verified): ?><li><a href="doc.php?t=receipt" target="_blank">Kwitansi / Payment receipt</a></li>
-<li><a href="doc.php?t=badge" target="_blank">E-ticket &amp; name badge (QR)</a></li>
-<li><a href="doc.php?t=invitation" target="_blank">Invitation letter (visa / izin)</a></li><?php endif; ?>
-<?php if ($pres && $R['paper_status'] === 'accepted'): ?><li><a href="doc.php?t=loa" target="_blank">Letter of Acceptance (LoA)</a></li><?php endif; ?>
-<?php if (certReady($R)): ?><li><a href="doc.php?t=cert" target="_blank"><b>E-Certificate</b></a></li><?php endif; ?>
+<li><a class="js-doc" href="doc.php?t=invoice" target="_blank">Invoice</a></li>
+<?php if ($verified): ?><li><a class="js-doc" href="doc.php?t=receipt" target="_blank">Kwitansi / Payment receipt</a></li>
+<li><a class="js-doc" href="doc.php?t=badge" target="_blank">E-ticket &amp; name badge (QR)</a></li>
+<li><a class="js-doc" href="doc.php?t=invitation" target="_blank">Invitation letter (visa / izin)</a></li><?php endif; ?>
+<?php if ($pres && $R['paper_status'] === 'accepted'): ?><li><a class="js-doc" href="doc.php?t=loa" target="_blank">Letter of Acceptance (LoA)</a></li><?php endif; ?>
+<?php if (certReady($R)): ?><li><a class="js-doc" href="doc.php?t=cert" target="_blank"><b>E-Certificate</b></a></li><?php endif; ?>
 </ul><?php if (!$verified): ?><p><small>Kwitansi, e-ticket, dan surat undangan tersedia setelah pembayaran terverifikasi.</small></p><?php elseif (!certReady($R)): ?><p><small>E-certificate tersedia setelah acara<?= $R['attendance'] === 'Offline' && setting('cert_checkin', '1') === '1' ? ' (wajib check-in di lokasi dengan menunjukkan QR e-ticket)' : '' ?> dan dibuka oleh panitia.</small></p><?php endif; ?></div>
 
 <?php if ($verified && $R['attendance'] === 'Online' && (setting('online_link') || setting('online_info'))): ?>

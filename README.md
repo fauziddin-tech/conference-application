@@ -33,6 +33,8 @@ Ditulis dengan PHP + MySQL tanpa framework, sehingga bisa langsung diunggah ke s
   revisi otomatis menjadi ronde baru dan diteruskan ke reviewer yang sama
 - Data naskah dikunci di formulir setelah review dimulai; naskah final (camera-ready) setelah diterima
 - Opsi naskah **Word saja** (DOC/DOCX) agar reviewer bisa berkomentar langsung di file
+- **Sertifikat reviewer** (Certificate of Appreciation, berisi jumlah naskah yang direview, terverifikasi QR)
+- **Pratinjau dokumen dalam popup** (sertifikat, LoA, invoice, dll.); admin dapat mempratinjau sertifikat peserta/presenter/reviewer dengan data contoh dari Pengaturan
 - **Notifikasi di aplikasi** (ikon lonceng) untuk peserta, reviewer, dan admin, selain email
 
 **Admin**

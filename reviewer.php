@@ -58,6 +58,9 @@ if ($id):
     $q = $pdo->prepare("SELECT r.id,r.article_title,r.track,r.paper_status,r.review_round,v.submitted_at,v.recommendation,v.due_date FROM reviews v JOIN registrations r ON r.id=v.reg_id AND v.round=r.review_round WHERE v.reviewer_id=? ORDER BY v.submitted_at IS NOT NULL, v.due_date, v.created_at DESC"); $q->execute([$u['id']]); $L = $q->fetchAll();
     $todo = count(array_filter($L, function ($r) { return !$r['submitted_at'] && in_array($r['paper_status'], ['submitted', 'under_review'], true); })); ?>
 <h2>Review Naskah</h2><p>Halo, <b><?= e($u['name']) ?></b>. Ada <b><?= $todo ?></b> naskah menunggu review Anda dari total <?= count($L) ?> penugasan.<?= $blind ? ' Proses review bersifat <i>blind</i>: identitas penulis disembunyikan.' : '' ?></p>
+<?php $done = reviewerDone($u['id']); ?>
+<div class="panel certbox"><div><b>Sertifikat Reviewer</b><br><small><?= reviewerCertReady($u['id']) ? 'Terima kasih atas kontribusi Anda mereview ' . $done . ' naskah.' : ($done ? 'Sertifikat reviewer belum dibuka oleh panitia.' : 'Tersedia setelah Anda mengirim minimal satu review.') ?></small></div>
+<?php if (reviewerCertReady($u['id'])): ?><a class="btn js-doc" data-title="Sertifikat Reviewer" href="doc.php?t=revcert" target="_blank">Lihat Sertifikat</a><?php endif; ?></div>
 <?php if (!$L): ?><p class="panel">Belum ada naskah yang ditugaskan.</p><?php else: ?>
 <div class="scroll"><table><tr><th>ID</th><th>Judul</th><th>Track</th><th>Ronde</th><th>Tenggat</th><th>Review Anda</th><th>Status naskah</th><th></th></tr>
 <?php foreach ($L as $x): $late = !$x['submitted_at'] && $x['due_date'] && $x['due_date'] < date('Y-m-d'); ?><tr><td><?= no('R', $x['id']) ?></td><td><?= e($x['article_title']) ?></td><td><?= e($x['track']) ?></td><td><?= (int)$x['review_round'] ?></td><td><?= $x['due_date'] ? e(fdate($x['due_date'])) . ($late ? ' <span class="tag spam">terlambat</span>' : '') : '-' ?></td>

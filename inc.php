@@ -376,7 +376,16 @@ m.addEventListener('click',function(e){if(e.target===m)m.hidden=true});
 document.addEventListener('keydown',function(e){if(e.key==='Escape')m.hidden=true});
 var f=m.querySelector('form'),er=m.querySelector('.merr');
 f.addEventListener('submit',function(e){e.preventDefault();er.hidden=true;var b=f.querySelector('button.btn');b.disabled=true;
-fetch(f.action,{method:'POST',body:new FormData(f),headers:{'X-Requested-With':'fetch'},credentials:'same-origin'}).then(function(r){return r.json()}).then(function(j){if(j.ok){location.href=j.to}else{er.textContent=j.error||'Gagal membuat akun.';er.hidden=false;b.disabled=false;if(window.turnstile)turnstile.reset()}}).catch(function(){er.textContent='Terjadi kesalahan. Muat ulang halaman lalu coba lagi.';er.hidden=false;b.disabled=false})})})();</script></body></html><?php
+fetch(f.action,{method:'POST',body:new FormData(f),headers:{'X-Requested-With':'fetch'},credentials:'same-origin'}).then(function(r){return r.json()}).then(function(j){if(j.ok){location.href=j.to}else{er.textContent=j.error||'Gagal membuat akun.';er.hidden=false;b.disabled=false;if(window.turnstile)turnstile.reset()}}).catch(function(){er.textContent='Terjadi kesalahan. Muat ulang halaman lalu coba lagi.';er.hidden=false;b.disabled=false})})})();</script>
+<div id="docm" class="modal docm" hidden><div class="dbox" role="dialog" aria-modal="true" aria-labelledby="docmt">
+<div class="dbar"><b id="docmt">Pratinjau</b><span><button type="button" class="btn" id="docmp">Cetak / Simpan PDF</button> <a class="btn ghost2" id="docmo" href="#" target="_blank" rel="noopener">Buka di tab baru</a> <button type="button" class="mx" id="docmx" aria-label="Tutup">&times;</button></span></div>
+<iframe id="docmf" title="Pratinjau dokumen" src="about:blank"></iframe></div></div>
+<script>(function(){var m=document.getElementById('docm'),f=document.getElementById('docmf'),o=document.getElementById('docmo'),t=document.getElementById('docmt');
+window.openDoc=function(url,title){f.src=url;o.href=url;t.textContent=title||'Pratinjau';m.hidden=false;document.body.style.overflow='hidden'};
+function close(){m.hidden=true;f.src='about:blank';document.body.style.overflow=''}
+document.getElementById('docmx').onclick=close;m.addEventListener('click',function(e){if(e.target===m)close()});document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!m.hidden)close()});
+document.getElementById('docmp').onclick=function(){try{f.contentWindow.focus();f.contentWindow.print()}catch(x){window.open(f.src)}};
+document.addEventListener('click',function(e){var a=e.target.closest('a.js-doc');if(!a||e.ctrlKey||e.metaKey||e.shiftKey)return;e.preventDefault();openDoc(a.href,a.dataset.title||a.textContent.trim())})})();</script></body></html><?php
 }
 
 /** Jadwal acara, dikelompokkan per hari dengan tab. */
