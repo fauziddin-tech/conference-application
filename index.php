@@ -31,7 +31,7 @@ head(t('Home'), $ld); ?>
 <script>(function(){var m=document.getElementById('posm');function op(e){if(e)e.preventDefault();m.hidden=false;document.body.style.overflow='hidden'}function cl(){m.hidden=true;document.body.style.overflow=''}
 document.querySelectorAll('[data-poster]').forEach(function(a){a.addEventListener('click',op)});m.querySelector('.mx').onclick=cl;m.addEventListener('click',function(e){if(e.target===m)cl()});document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!m.hidden)cl()});
 m.querySelectorAll('a[href$="register.php"]').forEach(function(a){a.addEventListener('click',cl)});
-<?php if (setting('poster_popup') === '1'): ?>try{var k='posterSeen',v=localStorage.getItem(k);if(!v||Date.now()-(+v)>86400000){localStorage.setItem(k,Date.now());setTimeout(op,600)}}catch(x){}<?php endif; ?>})();</script>
+<?php if (setting('poster_popup') === '1'): ?>if(!/[?&](login|register)=1/.test(location.search))try{var k='posterSeen',v=localStorage.getItem(k);if(!v||Date.now()-(+v)>86400000){localStorage.setItem(k,Date.now());setTimeout(op,600)}}catch(x){}<?php endif; ?>})();</script>
 <?php endif; ?>
 <?php if ($news): ?><section class="s fade news"><h2><?= te('Announcements') ?></h2><div class="grid ngrid"><?php foreach (array_slice($news, 0, 3) as $n): ?>
 <article class="card"><small><?= e(fdateL($n['created_at'])) ?></small><h3><?= e(tx($n['title'])) ?></h3><p><?= nl2br(e(tx($n['body']))) ?></p><?php if (isurl($n['url'])): ?><p><a href="<?= e($n['url']) ?>" target="_blank" rel="noopener"><?= te('Read more') ?> &rarr;</a></p><?php endif; ?></article><?php endforeach; ?></div></section><?php endif; ?>

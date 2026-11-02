@@ -1,5 +1,6 @@
 <?php require 'inc.php'; chk(); $err = ''; $ajax = ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'fetch';
 if (($u = user()) && $_SERVER['REQUEST_METHOD'] !== 'POST') go(homeFor($u));
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' && empty($_GET['form']) && regOpen()) go(BASE . '?register=1'); // tampil sebagai pop-up di beranda
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $n = post('name'); $m = strtolower(post('email')); $pw = (string)($_POST['password'] ?? '');
     if (!regOpen()) $err = tx(setting('reg_close_msg'));

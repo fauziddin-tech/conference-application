@@ -1,5 +1,7 @@
 <?php require 'inc.php'; chk(); $err = ''; $ajax = ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'fetch';
 if (($u = user()) && !$ajax) go(homeFor($u));
+// halaman login tampil sebagai pop-up di beranda (tautan email, sesi habis, ketik langsung); ?form=1 = versi halaman penuh tanpa JavaScript
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' && empty($_GET['form'])) go(BASE . '?login=1');
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $m = strtolower(post('email')); $k = 'login:' . ip();
     if (throttled($k, 8, 900)) $err = t('Too many login attempts. Try again in 15 minutes.');

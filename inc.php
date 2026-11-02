@@ -438,7 +438,8 @@ function head($t, $extra = '')
 <label><?= te('Password (min. 8 characters)') ?><input type="password" name="password" required minlength="8" autocomplete="new-password"></label>
 <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true"><?= captchaHtml() ?>
 <button class="btn"><?= te('Create Account & Continue') ?></button><p><small><?= te('Already have an account?') ?> <a href="<?= $H ?>login.php"><?= te('Log in') ?></a></small></p></form></div></div><?php endif; ?><main id="main">
-<?php if ($f = flash()): ?><p class="msg" role="status"><?= e($f) ?></p><?php endif;
+<?php if ($f = flash()): ?><p class="msg" role="status"><?= e($f) ?></p><?php endif; ?>
+<?php if (!$u && (isset($_GET['login']) || isset($_GET['register']))): ?><noscript><p class="msg"><a href="<?= $H ?>login.php?form=1"><?= te('Log in') ?></a> &middot; <a href="<?= $H ?>register.php?form=1"><?= te('Register') ?></a></p></noscript><?php endif;
 }
 
 function foot()
@@ -456,7 +457,8 @@ document.querySelectorAll('.daytabs').forEach(function(w){var b=w.querySelectorA
 document.querySelectorAll('[data-countdown]').forEach(function(c){var t=Date.parse(c.dataset.countdown);if(isNaN(t))return;function u(){var d=Math.max(0,t-Date.now())/1000;if(d<=0){c.innerHTML='<b>'+<?= json_encode(t('The event has started!')) ?>+'</b>';return}var v=[Math.floor(d/86400),Math.floor(d%86400/3600),Math.floor(d%3600/60),Math.floor(d%60)];c.querySelectorAll('b').forEach(function(b,i){b.textContent=v[i]})}u();setInterval(u,1000)});
 </script>
 <script>(function(){var m=document.getElementById('regm');if(!m)return;
-var op=function(e){if(/register\.php$/.test(location.pathname))return;e.preventDefault();m.hidden=false;var i=m.querySelector('input[name=name]');if(i)i.focus()};
+var op=function(e){if(e){if(/register\.php$/.test(location.pathname))return;e.preventDefault()}m.hidden=false;var i=m.querySelector('input[name=name]');if(i)i.focus()};
+if(/[?&]register=1/.test(location.search)){op();history.replaceState(null,'',location.pathname+location.hash)}
 document.querySelectorAll('a[href$="register.php"]').forEach(function(a){a.addEventListener('click',op)});
 m.addEventListener('click',function(e){if(e.target===m)m.hidden=true});
 document.addEventListener('keydown',function(e){if(e.key==='Escape')m.hidden=true});
@@ -464,7 +466,8 @@ var f=m.querySelector('form'),er=m.querySelector('.merr');
 f.addEventListener('submit',function(e){e.preventDefault();er.hidden=true;var b=f.querySelector('button.btn');b.disabled=true;
 fetch(f.action,{method:'POST',body:new FormData(f),headers:{'X-Requested-With':'fetch'},credentials:'same-origin'}).then(function(r){return r.json()}).then(function(j){if(j.ok){location.href=j.to}else{er.textContent=j.error||<?= json_encode(t('Could not create the account.')) ?>;er.hidden=false;b.disabled=false;if(window.turnstile)turnstile.reset()}}).catch(function(){er.textContent=<?= json_encode(t('Something went wrong. Reload the page and try again.')) ?>;er.hidden=false;b.disabled=false})})})();</script>
 <script>(function(){var m=document.getElementById('logm');if(!m)return;var r=document.getElementById('regm');
-function show(e){if(/login\.php$/.test(location.pathname))return;e.preventDefault();if(r)r.hidden=true;m.hidden=false;var i=m.querySelector('input[name=email]');if(i)i.focus()}
+function show(e){if(e){if(/login\.php$/.test(location.pathname))return;e.preventDefault()}if(r)r.hidden=true;m.hidden=false;var i=m.querySelector('input[name=email]');if(i)i.focus()}
+if(/[?&]login=1/.test(location.search)){show();history.replaceState(null,'',location.pathname+location.hash)}
 document.querySelectorAll('a[href$="login.php"]').forEach(function(a){a.addEventListener('click',show)});
 document.querySelectorAll('a[href$="register.php"]').forEach(function(a){a.addEventListener('click',function(){m.hidden=true})});
 m.addEventListener('click',function(e){if(e.target===m)m.hidden=true});document.addEventListener('keydown',function(e){if(e.key==='Escape')m.hidden=true});
