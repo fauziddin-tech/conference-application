@@ -45,11 +45,16 @@ m.querySelectorAll('a[href$="register.php"]').forEach(function(a){a.addEventList
 <li class="<?= $past ? 'past' : '' ?>"><time datetime="<?= e($d['extra']) ?>"><?= e(fdateL($d['extra'])) ?></time><b><?= e(tx($d['title'])) ?></b><?php if ($d['body']): ?><small><?= e(tx($d['body'])) ?></small><?php endif; ?><?php if ($past): ?><span class="tag"><?= te('Closed') ?></span><?php endif; ?></li><?php endforeach; ?></ol></section><?php endif; ?>
 
 <section id="speakers" class="s fade"><h2><?= te('Speakers') ?></h2>
-<?php $G = []; foreach (rows('speakers') as $s) { $G[strtolower(trim($s[0]))][] = $s; }
-$pri = function ($r) { return stripos($r, 'open speech') !== false ? 0 : (stripos($r, 'keynote') !== false ? 1 : 2); };
+<?php
+// Baris: Open Speech → Keynote → pembicara lain → Dekan → Panitia inti (ketua, sekretaris, bendahara dalam satu baris)
+$isDean = function ($r) { return (bool)preg_match('/\bdean\b|dekan/i', $r); };
+$isCom = function ($r) { return (bool)preg_match('/chair|ketua|secretar|sekretar|treasur|bendahara|committee|panitia/i', $r); };
+$G = []; foreach (rows('speakers') as $s) { $r = trim($s[0]); $G[$isDean($r) ? '~dean' : ($isCom($r) ? '~committee' : strtolower($r))][] = $s; }
+if (isset($G['~committee'])) { $cr = function ($r) { return preg_match('/chair|ketua/i', $r) ? 0 : (preg_match('/secretar|sekretar/i', $r) ? 1 : (preg_match('/treasur|bendahara/i', $r) ? 2 : 3)); }; $i = 0; foreach ($G['~committee'] as &$c) $c['o'] = $cr($c[0]) * 1000 + $i++; unset($c); usort($G['~committee'], function ($a, $b) { return $a['o'] <=> $b['o']; }); }
+$pri = function ($r) { return $r === '~dean' ? 3 : ($r === '~committee' ? 4 : (stripos($r, 'open speech') !== false ? 0 : (stripos($r, 'keynote') !== false ? 1 : 2))); };
 $keys = array_keys($G); $ord = array_flip($keys);
 usort($keys, function ($a, $b) use ($pri, $ord) { $d = $pri($a) <=> $pri($b); return $d ?: ($ord[$a] <=> $ord[$b]); });
-foreach ($keys as $k): $pr = $pri($k); $sz = [2, 1.5, 1][$pr]; $cl = ['k2', 'k15', 'k1'][$pr]; ?>
+foreach ($keys as $k): $pr = $pri($k); $sz = [2, 1.5, 1, 2, 1.5][$pr]; $cl = ['k2', 'k15', 'k1', 'k2', 'k15'][$pr]; ?>
 <div class="spgroup <?= $cl ?>" style="--k:<?= $sz ?>"><?php foreach ($G[$k] as $s): ?><div class="card sp"><?php if (!empty($s[3])): ?><img src="uploads/<?= e($s[3]) ?>" alt="<?= e($s[1] ?? '') ?>" loading="lazy" decoding="async"<?= imgDims($s[3]) ?>><?php else: ?><div class="ph" aria-hidden="true"><?= e(initials($s[1] ?? '')) ?></div><?php endif; ?><small><?= e(tx($s[0])) ?></small><b><?= e($s[1] ?? '') ?></b><span><?= e($s[2] ?? '') ?></span></div><?php endforeach; ?></div>
 <?php endforeach; ?></section>
 
