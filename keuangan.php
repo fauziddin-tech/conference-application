@@ -128,7 +128,7 @@ Tagihan: <b><?= e($x['pay_amount']) ?></b><br>Pengirim: <b><?= e($x['pay_sender'
 <form method="post" class="vform"><?= csrf() ?><input type="hidden" name="a" value="verify"><input type="hidden" name="id" value="<?= $x['id'] ?>">
 <label>Mata uang<select name="cur"><?php foreach ($CUR as $c): ?><option <?= $xc === $c ? 'selected' : '' ?>><?= $c ?></option><?php endforeach; ?></select></label>
 <label>Jumlah diterima<input name="amount" inputmode="decimal" value="<?= e(regExpected($x) + 0) ?>"></label>
-<label class="full">Catatan untuk peserta <small>(wajib bila ditolak)</small><input name="note" value="<?= e($x['admin_note']) ?>"></label>
+<label class="full">Catatan untuk peserta <small>wajib bila ditolak</small><input name="note" value="<?= e($x['admin_note']) ?>"></label>
 <label class="chk full"><input type="checkbox" name="email" value="1" checked> Kirim email ke peserta</label>
 <div class="full vbtn"><button class="btn" name="decision" value="verified">&#10004; Terverifikasi</button><button class="btn danger" name="decision" value="rejected">Tolak</button></div></form></div>
 <?php endforeach; ?>
@@ -165,7 +165,7 @@ Tagihan: <b><?= e($x['pay_amount']) ?></b><br>Pengirim: <b><?= e($x['pay_sender'
 <label>Jumlah *<input name="amount" required inputmode="decimal" value="<?= $E ? e($E['amount'] + 0) : '' ?>" placeholder="1.500.000"></label>
 <label>Mata uang<select name="currency"><?php foreach ($CUR as $c): ?><option <?= ($E['currency'] ?? 'IDR') === $c ? 'selected' : '' ?>><?= $c ?></option><?php endforeach; ?></select></label>
 <label>Metode<select name="method"><?php foreach ($METHODS as $k => $l): ?><option value="<?= $k ?>" <?= ($E['method'] ?? 'transfer') === $k ? 'selected' : '' ?>><?= $l ?></option><?php endforeach; ?></select></label>
-<label>Nota / bukti <small>(PDF/JPG/PNG, opsional)</small><input type="file" name="receipt" accept=".pdf,.jpg,.jpeg,.png"><?php if (!empty($E['receipt_file'])): ?><small>Tersimpan: <a class="js-doc" data-title="Nota" href="file.php?cash=<?= $E['id'] ?>&view=1" target="_blank"><?= e($E['receipt_name']) ?></a> &middot; <label class="chk" style="display:inline-flex"><input type="checkbox" name="receipt_rm" value="1"> hapus</label></small><?php endif; ?></label>
+<label>Nota / bukti <small>PDF/JPG/PNG, opsional</small><input type="file" name="receipt" accept=".pdf,.jpg,.jpeg,.png"><?php if (!empty($E['receipt_file'])): ?><small>Tersimpan: <a class="js-doc" data-title="Nota" href="file.php?cash=<?= $E['id'] ?>&view=1" target="_blank"><?= e($E['receipt_name']) ?></a> &middot; <label class="chk" style="display:inline-flex"><input type="checkbox" name="receipt_rm" value="1"> hapus</label></small><?php endif; ?></label>
 <div class="full"><button class="btn"><?= $E ? 'Simpan Perubahan' : 'Catat' ?></button><?php if ($E): ?> <a href="?p=kas">Batal</a><?php endif; ?></div></form>
 <script>(function(){var C={in:<?= json_encode(finCategories('in')) ?>,out:<?= json_encode(finCategories('out')) ?>},t=document.getElementById('ctype'),c=document.getElementById('ccat'),cur=<?= json_encode($E['category'] ?? '') ?>;
 function fill(){var l=C[t.value].slice();if(cur&&l.indexOf(cur)<0)l.unshift(cur);c.innerHTML='';l.forEach(function(v){var o=document.createElement('option');o.textContent=v;if(v===cur)o.selected=true;c.appendChild(o)})}t.addEventListener('change',function(){cur='';fill()});fill()})();</script>
@@ -219,9 +219,9 @@ function fill(){var l=C[t.value].slice();if(cur&&l.indexOf(cur)<0)l.unshift(cur)
 
 <?php else: ?>
 <form method="post" class="card"><?= csrf() ?><input type="hidden" name="a" value="finset">
-<label>Kurs 1 USD dalam Rupiah <small>(untuk total gabungan setara IDR; kosongkan bila tidak dipakai)</small><input name="usd_rate" inputmode="decimal" value="<?= usdRate() ? e(number_format(usdRate(), 0, ',', '.')) : '' ?>" placeholder="16.250"></label>
-<label class="full">Kategori pengeluaran <small>(satu per baris)</small><textarea name="fin_cat_out" rows="8"><?= e(setting('fin_cat_out')) ?></textarea></label>
-<label class="full">Kategori pemasukan lain <small>(satu per baris)</small><textarea name="fin_cat_in" rows="4"><?= e(setting('fin_cat_in')) ?></textarea></label>
+<label>Kurs 1 USD dalam Rupiah <small>untuk total gabungan setara IDR; kosongkan bila tidak dipakai</small><input name="usd_rate" inputmode="decimal" value="<?= usdRate() ? e(number_format(usdRate(), 0, ',', '.')) : '' ?>" placeholder="16.250"></label>
+<label class="full">Kategori pengeluaran <small>satu per baris</small><textarea name="fin_cat_out" rows="8"><?= e(setting('fin_cat_out')) ?></textarea></label>
+<label class="full">Kategori pemasukan lain <small>satu per baris</small><textarea name="fin_cat_in" rows="4"><?= e(setting('fin_cat_in')) ?></textarea></label>
 <button class="btn">Simpan</button></form>
 <p><small>Akun bendahara dibuat oleh admin di Panel Admin &rarr; Akun &rarr; Tambah Akun (peran Bendahara). Bendahara hanya dapat membuka halaman Keuangan, bukti bayar, invoice, dan kwitansi.</small></p>
 <?php endif; foot();

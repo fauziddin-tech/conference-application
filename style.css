@@ -290,3 +290,15 @@ section.poster{margin-top:24px}
 .rsign{display:flex;justify-content:space-between;gap:20px;margin-top:36px;text-align:center}.rsign div{min-width:220px}.rsign .sg{height:64px}.rsign p{margin:0}
 @media print{.noprint,.tabs,.msg{display:none!important}main{width:100%;padding:0}.report{border:0;box-shadow:none;padding:0;max-width:none}.rtab .rsec td{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 .danger-zone{border:1px solid #e3b3b3;border-left:5px solid #b42323}.danger-zone ul{margin:6px 0}
+/* form rapi: label di atas, kotak isian sejajar & sama tinggi, keterangan kecil di bawah kotak */
+label:not(.chk){display:flex;flex-direction:column}
+label:not(.chk)>small{order:2;display:block;margin-top:5px;font-size:.8rem;font-weight:400;line-height:1.4;opacity:.72}
+label:not(.chk)>small+small{margin-top:2px}
+input:not([type=checkbox]):not([type=radio]):not([type=file]),select{height:44px;padding:0 12px}
+input[type=file]{padding:8px}
+input,select,textarea{font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+label small code{font-size:.9em;padding:0 4px}
+form.card.cols4{grid-template-columns:repeat(4,minmax(0,1fr))}form.card.cols3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:900px){form.card.cols4,form.card.cols3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){form.card.cols4,form.card.cols3{grid-template-columns:1fr}}
+.filters .btn,.filters button{height:44px;display:inline-flex;align-items:center;margin:0;padding-top:0;padding-bottom:0}
