@@ -302,3 +302,9 @@ form.card.cols4{grid-template-columns:repeat(4,minmax(0,1fr))}form.card.cols3{gr
 @media(max-width:900px){form.card.cols4,form.card.cols3{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){form.card.cols4,form.card.cols3{grid-template-columns:1fr}}
 .filters .btn,.filters button{height:44px;display:inline-flex;align-items:center;margin:0;padding-top:0;padding-bottom:0}
+/* profil akun */
+.profile-head{display:flex;align-items:center;gap:16px;flex-wrap:wrap}.profile-head>div:nth-child(2){flex:1;min-width:200px}.profile-head b{font-family:system-ui,sans-serif;font-size:1.1rem}
+.avatar{width:56px;height:56px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font:700 1.5rem system-ui,sans-serif;flex:none}
+.hint-box{grid-column:1/-1;margin:0 0 10px;font-size:.88rem;opacity:.85}
+nav a.me{display:inline-flex;align-items:center;gap:6px}nav a.me .ic{flex:none}
+.profile-head>:first-child:not(.avatar){flex:1}

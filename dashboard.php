@@ -2,18 +2,7 @@
 $R = regOf($u['id']);
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $a = post('a');
-    if ($a === 'profile') {
-        $n = post('name');
-        if (!validName($n)) { flash(t('Names may only contain letters, spaces, periods, commas and hyphens (no numbers, links or symbols).')); go('dashboard.php#profil'); }
-        $pdo->prepare("UPDATE users SET name=?,institution=?,phone=? WHERE id=?")->execute([$n, post('institution'), post('phone'), $u['id']]);
-        $pw = (string)($_POST['password'] ?? '');
-        if ($pw !== '') {
-            if (!password_verify((string)($_POST['current'] ?? ''), $u['password'])) { flash(t('Current password is incorrect; the password was not changed.')); go('dashboard.php#profil'); }
-            if (strlen($pw) < 8) { flash(t('The new password must be at least 8 characters; the password was not changed.')); go('dashboard.php#profil'); }
-            setPassword($u['id'], $pw, true);
-        }
-        flash(t('Profile updated.')); go('dashboard.php#profil');
-    }
+    if ($a === 'profile') go('profile.php');
     // Unggah naskah revisi / camera-ready (tetap bisa walau pembayaran sudah terverifikasi)
     if (in_array($a, ['revision', 'camera'], true) && $R && $R['article_title']) {
         $ok = $a === 'revision' ? $R['paper_status'] === 'revision' : $R['paper_status'] === 'accepted';
@@ -113,11 +102,4 @@ $st[] = [t('Certificate'), certReady($R) ? 'done' : '', certReady($R) ? t('Ready
 
 <h3><?= te('Program') ?></h3><?php agenda(); ?>
 
-<h3 id="profil"><?= te('Profile & Security') ?></h3><form method="post" class="card"><?= csrf() ?><input type="hidden" name="a" value="profile">
-<label><?= te('Email') ?><input value="<?= e($u['email']) ?>" disabled></label>
-<label><?= te('Name') ?><input name="name" required value="<?= e($u['name']) ?>"></label>
-<label><?= te('Institution') ?><input name="institution" value="<?= e($u['institution']) ?>"></label>
-<label><?= te('Phone') ?><input name="phone" value="<?= e($u['phone']) ?>"></label>
-<label><?= te('Current password (required to change password)') ?><input type="password" name="current" autocomplete="current-password"></label>
-<label><?= te('New password (leave empty to keep)') ?><input type="password" name="password" minlength="8" autocomplete="new-password"></label>
-<button class="btn"><?= te('Save') ?></button></form><?php foot();
+<h3 id="profil"><?= te('Profile & Security') ?></h3><div class="panel profile-head"><div><?= te('Update your name, institution, phone, login email and password.') ?></div><a class="btn" href="profile.php"><?= te('Edit Profile') ?></a></div><?php foot();

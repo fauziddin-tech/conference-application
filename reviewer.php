@@ -3,13 +3,6 @@
 $blind = setting('blind_review', '1') === '1';
 $id = (int)($_GET['id'] ?? $_POST['id'] ?? 0);
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (post('a') === 'pw') {
-        $pw = (string)($_POST['password'] ?? '');
-        if (!password_verify((string)($_POST['current'] ?? ''), $u['password'])) flash(t('Current password is incorrect.'));
-        elseif (strlen($pw) < 8) flash(t('Password must be at least 8 characters.'));
-        else { setPassword($u['id'], $pw, true); flash(t('Password changed.')); }
-        go('reviewer.php');
-    }
     $q = $pdo->prepare("SELECT v.id,v.file,v.submitted_at,r.paper_status,r.review_round FROM reviews v JOIN registrations r ON r.id=v.reg_id WHERE v.reg_id=? AND v.reviewer_id=? AND v.round=r.review_round"); $q->execute([$id, $u['id']]); $V = $q->fetch();
     if (!$V) { http_response_code(403); die(t('Access denied')); }
     $back = 'reviewer.php?id=' . $id;
@@ -65,5 +58,5 @@ if ($id):
 <div class="scroll"><table><tr><th>ID</th><th><?= te('Title') ?></th><th>Track</th><th><?= te('Round') ?></th><th><?= te('Due') ?></th><th><?= te('Your review') ?></th><th><?= te('Paper status') ?></th><th></th></tr>
 <?php foreach ($L as $x): $late = !$x['submitted_at'] && $x['due_date'] && $x['due_date'] < date('Y-m-d'); ?><tr><td><?= no('R', $x['id']) ?></td><td><?= e($x['article_title']) ?></td><td><?= e(tx($x['track'])) ?></td><td><?= (int)$x['review_round'] ?></td><td><?= $x['due_date'] ? e(fdateL($x['due_date'])) . ($late ? ' <span class="tag spam">' . te('overdue') . '</span>' : '') : '-' ?></td>
 <td><?= $x['submitted_at'] ? '<span class="badge verified">' . e(lbl($REC, $x['recommendation'])) . '</span>' : '<span class="badge pending">' . te('Not yet') . '</span>' ?></td><td><?= e(lbl($PAPER, $x['paper_status'])) ?></td><td><a href="?id=<?= $x['id'] ?>"><?= $x['submitted_at'] ? te('View') : te('Review') ?></a></td></tr><?php endforeach; ?></table></div><?php endif; ?>
-<h3><?= te('Change Password') ?></h3><form method="post" class="card"><?= csrf() ?><input type="hidden" name="a" value="pw"><label><?= te('Current password') ?><input type="password" name="current" required></label><label><?= te('New password (min. 8 characters)') ?><input type="password" name="password" required minlength="8"></label><button class="btn"><?= te('Save') ?></button></form>
+<p class="panel profile-head"><span><?= te('Update your name, institution, phone, login email and password.') ?></span><a class="btn" href="profile.php"><?= te('Edit Profile') ?></a></p>
 <?php endif; foot();
