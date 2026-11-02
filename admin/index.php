@@ -62,15 +62,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     case 'status':
         $st = in_array($_POST['status'] ?? '', ['pending', 'confirmed', 'rejected'], true) ? $_POST['status'] : 'pending';
         $pdo->prepare("UPDATE users SET status=? WHERE id=? AND role='peserta'")->execute([$st, $id]); break;
-    case 'del':
-        $q = $pdo->prepare("SELECT id,article_file,pay_file,camera_file FROM registrations WHERE user_id=?"); $q->execute([$id]);
-        if ($r0 = $q->fetch()) { deletePaper($r0['id']); rmPriv($r0['article_file']); rmPriv($r0['pay_file']); rmPriv($r0['camera_file']); }
-        $q = $pdo->prepare("SELECT file FROM reviews WHERE reviewer_id=?"); $q->execute([$id]); foreach ($q->fetchAll(PDO::FETCH_COLUMN) as $f) rmPriv($f);
+    case 'del': // hapus akun beserta pendaftaran, pembayaran, naskah, review, dan semua file privatnya
+        $bk = post('back'); $back = in_array($bk, ['peserta', 'pengguna', 'pengguna&role=reviewer', 'pengguna&role=bendahara'], true) ? '?p=' . $bk : '?p=pengguna';
+        $q = $pdo->prepare("SELECT * FROM users WHERE id=? AND role IN('peserta','reviewer','bendahara')"); $q->execute([$id]); $du = $q->fetch();
+        if (!$du) { $msg = 'Akun tidak ditemukan atau tidak boleh dihapus (akun admin).'; break; }
+        if ((int)$du['id'] === (int)$u['id']) { $msg = 'Tidak bisa menghapus akun sendiri.'; break; }
+        $info = [];
+        $q = $pdo->prepare("SELECT * FROM registrations WHERE user_id=?"); $q->execute([$id]);
+        if ($r0 = $q->fetch()) {
+            $nf = count(paperFiles($r0['id']));
+            deletePaper($r0['id']); rmPriv($r0['article_file']); rmPriv($r0['pay_file']); rmPriv($r0['camera_file']);
+            $info[] = 'pendaftaran ' . no('R', $r0['id']);
+            $info[] = $r0['pay_status'] === 'verified' ? 'pembayaran terverifikasi ' . money($r0['pay_received'], $r0['pay_currency'] ?: 'IDR') : 'data pembayaran (' . lbl($PAY, $r0['pay_status']) . ')';
+            if ($nf) $info[] = $nf . ' berkas naskah';
+        }
+        $q = $pdo->prepare("SELECT file FROM reviews WHERE reviewer_id=?"); $q->execute([$id]); $rvf = $q->fetchAll(PDO::FETCH_COLUMN); foreach ($rvf as $f) rmPriv($f);
+        if ($rvf) $info[] = count($rvf) . ' review';
         $pdo->prepare("DELETE FROM reviews WHERE reviewer_id=?")->execute([$id]);
         $pdo->prepare("DELETE FROM notifications WHERE user_id=?")->execute([$id]);
         $pdo->prepare("DELETE FROM registrations WHERE user_id=?")->execute([$id]);
-        $pdo->prepare("DELETE FROM users WHERE id=? AND role IN('peserta','reviewer','bendahara')")->execute([$id]);
-        $msg = 'Akun dihapus.'; break;
+        $pdo->prepare("DELETE FROM users WHERE id=?")->execute([$id]);
+        $msg = 'Akun "' . $du['name'] . '" (' . $du['email'] . ') dihapus' . ($info ? ' beserta ' . implode(', ', $info) : '') . '. Ringkasan keuangan & statistik sudah tidak menghitungnya.'; break;
     case 'spamclean': // hapus akun peserta mencurigakan yang belum mengisi formulir
         $n = 0;
         foreach ($pdo->query("SELECT u.id,u.name,u.email FROM users u WHERE u.role='peserta' AND NOT EXISTS(SELECT 1 FROM registrations r WHERE r.user_id=u.id)")->fetchAll() as $s)

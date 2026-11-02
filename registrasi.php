@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$locked && !$closed) {
         }
         $hasProof = !empty($_FILES['proof']['name']) || ($R && $R['pay_file']);
         if ($hasProof) {
-            $d = DateTime::createFromFormat('Y-m-d', (string)$f['pay_date']);
+            $d = DateTime::createFromFormat('!Y-m-d', (string)$f['pay_date']); // '!' = jam 00:00, agar tanggal hari ini tidak dianggap "masa depan"
             if (!$d || $d->format('Y-m-d') !== $f['pay_date'] || $d > new DateTime('today')) $err[] = t('Invalid payment date.');
             if ($f['pay_sender'] === '') $err[] = t('Payment sender name is required.');
         }

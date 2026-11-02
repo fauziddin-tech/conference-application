@@ -11,7 +11,7 @@ $info = ['Title' => e($x['prefix']), 'Nama lengkap' => e($x['full_name']), 'Emai
     'Kode tiket' => e($x['ticket']), 'Check-in' => $x['checked_in_at'] ? e($x['checked_in_at']) : '- <a href="../checkin.php?c=' . e($x['ticket']) . '">check-in</a>',
     'Mendaftar' => e($x['created_at']), 'Terakhir diubah' => e($x['updated_at'])];
 if (!$x['article_title']) foreach (['Track', 'Judul artikel', 'Co-authors', 'Keywords', 'Abstract', 'File naskah', 'Camera-ready'] as $k) unset($info[$k]); ?>
-<p><a href="?p=peserta">&larr; Kembali ke daftar peserta</a> &middot; <a href="?p=edit&id=<?= $x['user_id'] ?>">Edit akun / reset password</a></p>
+<p><a href="?p=peserta">&larr; Kembali ke daftar peserta</a> &middot; <a href="?p=edit&id=<?= $x['user_id'] ?>">Edit akun / reset password</a> &middot; <a href="#hapus" class="neg">Hapus peserta</a></p>
 <h3><?= no('R', $x['id']) ?> &middot; <?= e($x['prefix'] . ' ' . $x['full_name']) ?></h3>
 <p class="docs-inline">Dokumen: <?php foreach (['invoice' => 'Invoice', 'receipt' => 'Kwitansi', 'badge' => 'Badge', 'invitation' => 'Undangan', 'loa' => 'LoA', 'cert' => 'Sertifikat'] as $k => $l): ?><a class="js-doc" data-title="<?= $l ?> · <?= no('R', $x['id']) ?>" href="../doc.php?t=<?= $k ?>&id=<?= $x['id'] ?>" target="_blank"><?= $l ?></a> <?php endforeach; ?><small>(admin dapat melihat semua dokumen untuk pratinjau)</small></p>
 <div class="scroll"><table><?php foreach ($info as $k => $v): ?><tr><th style="width:220px"><?= e($k) ?></th><td><?= $v ?></td></tr><?php endforeach; ?></table></div>
@@ -38,3 +38,11 @@ if (!$x['article_title']) foreach (['Track', 'Judul artikel', 'Co-authors', 'Key
 <label class="full">Catatan untuk peserta (tampil di dashboard &amp; email)<textarea name="admin_note" rows="3"><?= e($x['admin_note']) ?></textarea></label>
 <label class="chk full"><input type="checkbox" name="notify" value="1" checked> Kirim email notifikasi ke peserta bila status berubah</label>
 <button class="btn">Simpan</button></form>
+<?php $nf = count(paperFiles($x['id'])); $nrv = count(reviewsOf($x['id'])); ?>
+<h3 id="hapus">Hapus Peserta</h3>
+<div class="card danger-zone"><p>Gunakan untuk akun <b>uji coba</b>, pendaftaran ganda, atau atas permintaan peserta. Yang ikut terhapus permanen:</p>
+<ul><li>Akun login <b><?= e($x['email']) ?></b> dan notifikasinya</li><li>Pendaftaran <?= no('R', $x['id']) ?> &middot; pembayaran <b><?= $x['pay_status'] === 'verified' ? e(money($x['pay_received'], $x['pay_currency'] ?: 'IDR')) . ' (terverifikasi)' : e(lbl($PAY, $x['pay_status'])) ?></b><?= $x['pay_file'] ? ' &middot; file bukti bayar' : '' ?></li>
+<?php if ($x['article_title']): ?><li>Naskah: <?= $nf ?> berkas versi<?= $nrv ? ', ' . $nrv . ' review' : '' ?></li><?php endif; ?></ul>
+<p><small>Setelah dihapus, peserta tidak lagi dihitung di Ringkasan, Keuangan, maupun ekspor CSV. Kode verifikasi sertifikat/QR miliknya tidak berlaku lagi.</small></p>
+<form method="post" data-confirm="Hapus permanen <?= no('R', $x['id']) ?> &ndash; <?= e($x['full_name']) ?> beserta akun, pembayaran, bukti bayar, dan naskahnya? Tindakan ini tidak bisa dibatalkan."><?= csrf() ?><input type="hidden" name="a" value="del"><input type="hidden" name="id" value="<?= $x['user_id'] ?>"><input type="hidden" name="back" value="peserta"><button class="btn danger">Hapus Peserta Ini</button></form></div>
+
