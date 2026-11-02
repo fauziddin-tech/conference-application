@@ -309,3 +309,5 @@ form.card.cols4{grid-template-columns:repeat(4,minmax(0,1fr))}form.card.cols3{gr
 nav a.me{display:inline-flex;align-items:center;gap:6px}nav a.me .ic{flex:none}
 .profile-head>:first-child:not(.avatar){flex:1}
 .bookcta{text-align:center;margin:0 0 18px}.bookcta .btn{display:inline-flex;align-items:center;gap:10px}
+form.boa fieldset{border:1px solid var(--line);border-radius:8px;padding:8px 14px 4px;margin:0 0 12px}form.boa legend{font-weight:700;font-family:system-ui,sans-serif;padding:0 6px}
+.chkgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:0 16px}

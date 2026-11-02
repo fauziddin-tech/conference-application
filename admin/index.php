@@ -171,6 +171,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($a === 'jredit') { $r = jrow(); if ($r[0] === '') $msg = 'Nama jurnal wajib diisi.'; else { $rs[$i] = $r; saveRows('journals', $rs, 9); $msg = 'Data jurnal diperbarui.'; } }
         else { array_splice($rs, $i, 1); saveRows('journals', $rs, 9); $msg = 'Jurnal dihapus.'; }
         break;
+    case 'boa': // susun draf Book of Abstracts (.docx)
+        $back = '?p=jurnal#susun';
+        require_once __DIR__ . '/../lib/boa.php';
+        if (!class_exists('ZipArchive')) { $msg = 'Server tidak mendukung ZipArchive (ekstensi PHP zip). Aktifkan di cPanel → Select PHP Version → Extensions → zip.'; break; }
+        $st = array_values(array_intersect((array)($_POST['st'] ?? []), ['accepted', 'revision', 'under_review', 'submitted']));
+        if (!$st) { $msg = 'Pilih minimal satu status naskah.'; break; }
+        $secs = array_values(array_intersect((array)($_POST['sec'] ?? []), ['colophon', 'welcome', 'committee', 'toc', 'program', 'speakers', 'index', 'journals', 'sponsors']));
+        $sort = in_array(post('sort'), ['title', 'author', 'id'], true) ? post('sort') : 'title';
+        $n = 0; $f = boaBuild(['statuses' => $st, 'paid' => !empty($_POST['paid']), 'sort' => $sort, 'email' => !empty($_POST['email']), 'onepage' => !empty($_POST['onepage']), 'sections' => $secs], $n);
+        if (!$f) { $msg = 'Gagal membuat file Word (folder sementara server tidak bisa ditulisi).'; break; }
+        header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        header('Content-Disposition: attachment; filename="Draft-Book-of-Abstracts-' . preg_replace('/[^A-Za-z0-9-]/', '', brand()) . '-' . date('Ymd') . '.docx"');
+        header('Content-Length: ' . filesize($f)); header('Cache-Control: no-store');
+        readfile($f); @unlink($f); exit;
     case 'bookset': // Book of Abstracts (flipbook)
         $back = '?p=jurnal';
         foreach (['book_title', 'book_link_label', 'book_link_url', 'book_link_note'] as $k) setSetting($k, trim((string)($_POST[$k] ?? '')));
