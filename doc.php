@@ -1,4 +1,4 @@
-<?php require 'inc.php'; $u = need(['peserta', 'admin', 'reviewer']);
+<?php require 'inc.php'; $u = need(['peserta', 'admin', 'reviewer', 'bendahara']);
 /* Dokumen siap cetak / simpan PDF (Ctrl+P): invoice, receipt, loa, invitation, badge, cert, revcert (sertifikat reviewer).
  * Admin dapat membuka pratinjau dengan data contoh: ?t=cert&preview=participant|presenter|reviewer[&signers=...] */
 $t = (string)($_GET['t'] ?? '');
@@ -38,8 +38,8 @@ if ($preview) {
     if ($u['role'] !== 'admin' && !reviewerCertReady($RV['id'])) { http_response_code(403); die('Sertifikat reviewer tersedia setelah Anda mengirim minimal satu review dan panitia membuka sertifikat reviewer.'); }
     if (empty($RV['cert_code'])) { $RV['cert_code'] = 'RV' . substr(newTicket(), 0, 10); $pdo->prepare("UPDATE users SET cert_code=? WHERE id=?")->execute([$RV['cert_code'], $RV['id']]); }
 } else {
-    if ($u['role'] === 'reviewer') { http_response_code(403); die('Akses ditolak'); }
-    if ($u['role'] === 'admin') { $q = $pdo->prepare("SELECT * FROM registrations WHERE id=?"); $q->execute([(int)($_GET['id'] ?? 0)]); $R = $q->fetch(); }
+    if ($u['role'] === 'reviewer' || ($u['role'] === 'bendahara' && !in_array($t, ['invoice', 'receipt'], true))) { http_response_code(403); die('Akses ditolak'); }
+    if ($u['role'] === 'admin' || $u['role'] === 'bendahara') { $q = $pdo->prepare("SELECT * FROM registrations WHERE id=?"); $q->execute([(int)($_GET['id'] ?? 0)]); $R = $q->fetch(); }
     else $R = regOf($u['id']);
     if (!$R) { http_response_code(404); die('Data pendaftaran tidak ditemukan.'); }
     $q = $pdo->prepare("SELECT * FROM users WHERE id=?"); $q->execute([$R['user_id']]); $P = $q->fetch();
@@ -59,7 +59,7 @@ if ($t === 'spcert' || $t === 'cmcert' || $t === 'mdcert') {
     $name = trim($R['prefix'] === 'Other' ? $R['full_name'] : $R['prefix'] . ' ' . $R['full_name']);
     $verifyUrl = absUrl('verify.php?c=' . $R['ticket']);
     $ref = no('R', $R['id']);
-    $back = $u['role'] === 'admin' ? ($preview ? 'admin/?p=setting#sertifikat' : 'admin/?p=detail&id=' . $R['id']) : 'dashboard.php';
+    $back = $u['role'] === 'admin' ? ($preview ? 'admin/?p=setting#sertifikat' : 'admin/?p=detail&id=' . $R['id']) : ($u['role'] === 'bendahara' ? 'keuangan.php?p=pemasukan' : 'dashboard.php');
 }
 $today = fdateEn(date('Y-m-d'));
 function letterhead() { ?><header class="lh"><?php if (setting('logo_url')): ?><img src="<?= e(imgSrc(setting('logo_url'))) ?>" alt=""><?php endif; ?><div><b><?= e(setting('name')) ?></b><?php if (setting('organizer')): ?><br><?= e(tx(setting('organizer'), 'en')) ?><?php endif; ?><br><small><?= e(tx(setting('secretariat'), 'en')) ?><?= setting('email') ? ' · ' . e(setting('email')) : '' ?><?= setting('website') ? ' · ' . e(setting('website')) : '' ?></small></div></header><?php }

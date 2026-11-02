@@ -15,6 +15,12 @@ if (isset($_GET['pf'])) {
     $rev = $u['role'] === 'reviewer' && $isReviewer($f['reg_id']);
     if (!$admin && (int)$f['user_id'] !== (int)$u['id'] && !$rev) $deny();
     $fn = $f['file']; $dl = $rev ? 'naskah-' . no('R', $f['reg_id']) . '-v' . $f['version'] . ($f['kind'] === 'camera' ? '-final' : '') . '.' . pathinfo($fn, PATHINFO_EXTENSION) : $f['name'];
+} elseif (isset($_GET['cash'])) {
+    // nota/bukti transaksi buku kas: admin & bendahara
+    if (!finAccess($u)) $deny();
+    $q = $pdo->prepare("SELECT receipt_file,receipt_name,id FROM cash WHERE id=?"); $q->execute([(int)$_GET['cash']]); $c = $q->fetch();
+    if (!$c || !$c['receipt_file']) $deny();
+    $fn = $c['receipt_file']; $dl = 'nota-kas-' . $c['id'] . '-' . $c['receipt_name'];
 } elseif (isset($_GET['rv'])) {
     $q = $pdo->prepare("SELECT v.*,r.user_id,r.review_round,r.paper_status FROM reviews v JOIN registrations r ON r.id=v.reg_id WHERE v.id=?"); $q->execute([(int)$_GET['rv']]); $v = $q->fetch();
     if (!$v || !$v['file']) $deny();
@@ -25,7 +31,7 @@ if (isset($_GET['pf'])) {
 } else {
     $id = (int)($_GET['id'] ?? 0); $k = in_array($_GET['k'] ?? '', ['pay', 'camera'], true) ? $_GET['k'] : 'article';
     $s = $pdo->prepare("SELECT * FROM registrations WHERE id=?"); $s->execute([$id]); $r = $s->fetch();
-    $ok = $r && ($admin || (int)$r['user_id'] === (int)$u['id']);
+    $ok = $r && ($admin || (int)$r['user_id'] === (int)$u['id'] || ($u['role'] === 'bendahara' && $k === 'pay'));
     if ($r && !$ok && $u['role'] === 'reviewer' && $k !== 'pay') $ok = $isReviewer($id);
     if (!$ok) $deny();
     $fn = (string)$r[$k . '_file'];
@@ -36,5 +42,5 @@ if ($fn === '' || !is_file($path)) { http_response_code(404); die('File tidak di
 $ext = strtolower(pathinfo($fn, PATHINFO_EXTENSION));
 $mime = ['pdf' => 'application/pdf', 'doc' => 'application/msword', 'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png'][$ext] ?? 'application/octet-stream';
 header('Content-Type: ' . $mime); header('Content-Length: ' . filesize($path));
-header('Content-Disposition: attachment; filename="' . preg_replace('/[^A-Za-z0-9._-]/', '_', $dl) . '"');
+header('Content-Disposition: ' . (!empty($_GET['view']) && in_array($ext, ['pdf', 'jpg', 'jpeg', 'png'], true) ? 'inline' : 'attachment') . '; filename="' . preg_replace('/[^A-Za-z0-9._-]/', '_', $dl) . '"');
 readfile($path);

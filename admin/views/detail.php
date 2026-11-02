@@ -32,6 +32,8 @@ if (!$x['article_title']) foreach (['Track', 'Judul artikel', 'Co-authors', 'Key
 <h3>Verifikasi &amp; Keputusan</h3>
 <form method="post" class="card"><?= csrf() ?><input type="hidden" name="a" value="regsave"><input type="hidden" name="id" value="<?= $x['id'] ?>">
 <label>Status pembayaran<select name="pay_status"><?php foreach ($PAY as $s => $l): ?><option value="<?= $s ?>" <?= $x['pay_status'] === $s ? 'selected' : '' ?>><?= e($l) ?></option><?php endforeach; ?></select></label>
+<?php $xc = regCurrency($x); ?><label>Mata uang dibayar<select name="pay_currency"><?php foreach (['IDR', 'USD'] as $c): ?><option <?= $xc === $c ? 'selected' : '' ?>><?= $c ?></option><?php endforeach; ?></select></label>
+<label>Jumlah diterima <small>(diisi saat Terverifikasi; tagihan: <?= e($x['pay_amount']) ?>)</small><input name="pay_received" inputmode="decimal" value="<?= $x['pay_status'] === 'verified' && $x['pay_received'] !== null ? e($x['pay_received'] + 0) : e(regExpected($x)) ?>"></label>
 <?php if ($x['article_title']): ?><label>Status naskah<select name="paper_status"><?php foreach ($PAPER as $s => $l): ?><option value="<?= $s ?>" <?= $x['paper_status'] === $s ? 'selected' : '' ?>><?= e($l) ?></option><?php endforeach; ?></select></label><?php else: ?><input type="hidden" name="paper_status" value="<?= e($x['paper_status']) ?>"><?php endif; ?>
 <label class="full">Catatan untuk peserta (tampil di dashboard &amp; email)<textarea name="admin_note" rows="3"><?= e($x['admin_note']) ?></textarea></label>
 <label class="chk full"><input type="checkbox" name="notify" value="1" checked> Kirim email notifikasi ke peserta bila status berubah</label>

@@ -72,7 +72,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$locked && !$closed) {
             if ($art) { $q = $pdo->prepare("SELECT * FROM registrations WHERE id=?"); $q->execute([$rid]); $ver = addPaperFile($q->fetch(), 'submission', $art);
                 notifyAdmins(($R ? 'Naskah diperbarui (v' . $ver . ')' : 'Naskah baru') . ': ' . no('R', $rid) . ' "' . mb_strimwidth($f['article_title'], 0, 80, '…') . '"', 'admin/?p=detail&id=' . $rid); }
             if (!$R) notifyAdmins('Pendaftaran baru ' . no('R', $rid) . ': ' . $f['full_name'] . ' (' . $cat . ')', 'admin/?p=detail&id=' . $rid);
-            elseif ($pay) notifyAdmins('Bukti bayar diunggah ' . no('R', $rid) . ': ' . $f['full_name'], 'admin/?p=detail&id=' . $rid);
+            if (!$R && $pay) notifyBendahara('Bukti bayar diunggah ' . no('R', $rid) . ': ' . $f['full_name']);
+            elseif ($pay) notifyFinance('Bukti bayar diunggah ' . no('R', $rid) . ': ' . $f['full_name'], 'admin/?p=detail&id=' . $rid);
             $pdo->prepare("UPDATE users SET category=?,institution=?,phone=? WHERE id=?")->execute([$cat, $inst, $f['phone'], $u['id']]);
             if (!$R || $pay) {
                 $txt = (!$R ? "Your registration has been received.\n\nRegistration number: " . no('R', $rid) . "\nCategory: $cat ($att)\nFee: " . $row['pay_amount'] . ($pres ? "\nPaper: " . $f['article_title'] : '') . "\n\n" : '')

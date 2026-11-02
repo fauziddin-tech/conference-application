@@ -69,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare("DELETE FROM reviews WHERE reviewer_id=?")->execute([$id]);
         $pdo->prepare("DELETE FROM notifications WHERE user_id=?")->execute([$id]);
         $pdo->prepare("DELETE FROM registrations WHERE user_id=?")->execute([$id]);
-        $pdo->prepare("DELETE FROM users WHERE id=? AND role IN('peserta','reviewer')")->execute([$id]);
+        $pdo->prepare("DELETE FROM users WHERE id=? AND role IN('peserta','reviewer','bendahara')")->execute([$id]);
         $msg = 'Akun dihapus.'; break;
     case 'spamclean': // hapus akun peserta mencurigakan yang belum mengisi formulir
         $n = 0;
@@ -77,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!validName($s['name']) || blockedEmail($s['email'])) { $pdo->prepare("DELETE FROM users WHERE id=?")->execute([$s['id']]); $n++; }
         $msg = "$n akun mencurigakan dihapus."; $back = '?p=pengguna'; break;
     case 'uadd': // akun reviewer / admin baru
-        $n = post('name'); $m = strtolower(post('email')); $role = in_array(post('role'), ['reviewer', 'admin'], true) ? post('role') : 'reviewer';
+        $n = post('name'); $m = strtolower(post('email')); $role = in_array(post('role'), ['reviewer', 'admin', 'bendahara'], true) ? post('role') : 'reviewer';
         $q = $pdo->prepare("SELECT id FROM users WHERE email=?"); $q->execute([$m]);
         if ($n === '' || !filter_var($m, FILTER_VALIDATE_EMAIL)) $msg = 'Nama dan email valid wajib diisi.';
         elseif ($q->fetch()) $msg = 'Email sudah terdaftar.';
@@ -95,8 +95,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         elseif ($q->fetch()) $msg = 'Email sudah dipakai akun lain.';
         else {
             $sv = in_array($_POST['status'] ?? '', ['pending', 'confirmed', 'rejected'], true) ? $_POST['status'] : 'pending';
-            $role = in_array(post('role'), ['peserta', 'reviewer'], true) ? post('role') : 'peserta';
-            $pdo->prepare("UPDATE users SET name=?,email=?,institution=?,phone=?,category=?,status=?,role=? WHERE id=? AND role IN('peserta','reviewer')")->execute([$n, $m, post('institution'), post('phone'), post('category'), $sv, $role, $id]);
+            $role = in_array(post('role'), ['peserta', 'reviewer', 'bendahara'], true) ? post('role') : 'peserta';
+            $pdo->prepare("UPDATE users SET name=?,email=?,institution=?,phone=?,category=?,status=?,role=? WHERE id=? AND role IN('peserta','reviewer','bendahara')")->execute([$n, $m, post('institution'), post('phone'), post('category'), $sv, $role, $id]);
             $msg = 'Akun diperbarui.'; $back = '?p=pengguna';
         }
         break;
@@ -104,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $back = '?p=edit&id=' . $id; $pw = (string)($_POST['password'] ?? '');
         if ($pw === '') $pw = substr(strtr(base64_encode(random_bytes(9)), '+/=', 'xyz'), 0, 10);
         if (strlen($pw) < 8) $msg = 'Password minimal 8 karakter.';
-        else { $q = $pdo->prepare("SELECT 1 FROM users WHERE id=? AND role IN('peserta','reviewer')"); $q->execute([$id]); if ($q->fetch()) { setPassword($id, $pw); $msg = 'Password direset. Password baru: ' . $pw . ' (catat dan sampaikan ke pengguna; tidak ditampilkan lagi). Pengguna dikeluarkan dari sesi yang sedang aktif.'; } }
+        else { $q = $pdo->prepare("SELECT 1 FROM users WHERE id=? AND role IN('peserta','reviewer','bendahara')"); $q->execute([$id]); if ($q->fetch()) { setPassword($id, $pw); $msg = 'Password direset. Password baru: ' . $pw . ' (catat dan sampaikan ke pengguna; tidak ditampilkan lagi). Pengguna dikeluarkan dari sesi yang sedang aktif.'; } }
         break;
     case 'regsave':
         $back = '?p=detail&id=' . $id;
@@ -113,15 +113,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ps = isset($PAY[$_POST['pay_status'] ?? '']) ? $_POST['pay_status'] : $old['pay_status'];
         $pp = isset($PAPER[$_POST['paper_status'] ?? '']) ? $_POST['paper_status'] : $old['paper_status'];
         $note = post('admin_note');
-        $pdo->prepare("UPDATE registrations SET pay_status=?,paper_status=?,admin_note=? WHERE id=?")->execute([$ps, $pp, $note, $id]);
-        $pdo->prepare("UPDATE users SET status=? WHERE id=?")->execute([['unpaid' => 'pending', 'pending' => 'pending', 'verified' => 'confirmed', 'rejected' => 'rejected'][$ps], $old['user_id']]);
-        $nm = trim(($old['prefix'] === 'Other' ? '' : $old['prefix']) . ' ' . $old['full_name']); $sent = [];
-        if ($ps !== $old['pay_status'] && in_array($ps, ['verified', 'rejected'], true)) notifyUser($old['user_id'], $ps === 'verified' ? 'Pembayaran ' . no('R', $id) . ' terverifikasi. Kwitansi, e-ticket & surat undangan tersedia.' : 'Bukti bayar ' . no('R', $id) . ' ditolak. Lihat catatan panitia.', 'dashboard.php', $ps === 'verified' ? 'Payment ' . no('R', $id) . ' verified. Your receipt, e-ticket & invitation letter are available.' : 'Proof of payment ' . no('R', $id) . ' was rejected. See the committee note.');
+        $sent = applyPayment($old, $ps, $note, !empty($_POST['notify']), post('pay_currency'), $_POST['pay_received'] ?? null, $u['id']);
+        $pdo->prepare("UPDATE registrations SET paper_status=? WHERE id=?")->execute([$pp, $id]);
+        $nm = trim(($old['prefix'] === 'Other' ? '' : $old['prefix']) . ' ' . $old['full_name']);
         if ($old['article_title'] && $pp !== $old['paper_status'] && in_array($pp, ['revision', 'accepted', 'rejected'], true)) notifyUser($old['user_id'], 'Keputusan naskah ' . no('R', $id) . ': ' . ['revision' => 'Perlu revisi', 'accepted' => 'Diterima', 'rejected' => 'Ditolak'][$pp] . '. Lihat komentar reviewer.', 'dashboard.php#paper', 'Paper decision ' . no('R', $id) . ': ' . ['revision' => 'Revision required', 'accepted' => 'Accepted', 'rejected' => 'Rejected'][$pp] . '. See the reviewers\' comments.');
         if (!empty($_POST['notify'])) {
             $nt = $note !== '' ? "\n\nNote from the committee:\n$note" : '';
-            if ($ps !== $old['pay_status'] && $ps === 'verified') $sent[] = notify($old['email'], $nm, 'Payment verified', "Your payment for registration " . no('R', $id) . " has been verified. Your receipt, e-ticket (QR code for check-in), and invitation letter are now available in your dashboard." . ($old['attendance'] === 'Online' && setting('online_link') ? "\n\nThe online meeting link is available in your dashboard." : '') . $nt);
-            if ($ps !== $old['pay_status'] && $ps === 'rejected') $sent[] = notify($old['email'], $nm, 'Payment could not be verified', "We could not verify the proof of payment for registration " . no('R', $id) . ". Please check the note below and upload a valid proof of payment from your dashboard." . $nt);
             if ($old['article_title'] && $pp !== $old['paper_status']) {
                 $txt = ['accepted' => "Congratulations! Your paper \"" . $old['article_title'] . "\" has been ACCEPTED. Your Letter of Acceptance is available in the dashboard. Please upload the final (camera-ready) version of your paper through the dashboard.",
                     'revision' => "Your paper \"" . $old['article_title'] . "\" requires REVISION. Please read the reviewers' comments in your dashboard and upload the revised manuscript.",
@@ -291,7 +288,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $TABS = ['ringkasan' => 'Ringkasan', 'peserta' => 'Peserta', 'naskah' => 'Naskah & Review', 'pengguna' => 'Akun', 'pembicara' => 'Pembicara', 'konten' => 'Konten', 'agenda' => 'Agenda', 'jurnal' => 'Jurnal', 'email' => 'Email', 'setting' => 'Pengaturan', 'terjemahan' => 'Terjemahan', 'sistem' => 'Sistem'];
 head('Admin'); ?>
-<h2>Panel Admin</h2><div class="tabs"><?php foreach ($TABS as $k => $l): ?><a href="?p=<?= $k ?>" class="<?= $p === $k || ($k === 'peserta' && $p === 'detail') || ($k === 'pengguna' && $p === 'edit') ? 'on' : '' ?>"><?= e($l) ?></a><?php endforeach; ?><a href="../checkin.php">Check-in</a></div>
+<h2>Panel Admin</h2><div class="tabs"><?php foreach ($TABS as $k => $l): ?><a href="?p=<?= $k ?>" class="<?= $p === $k || ($k === 'peserta' && $p === 'detail') || ($k === 'pengguna' && $p === 'edit') ? 'on' : '' ?>"><?= e($l) ?></a><?php endforeach; ?><a href="../keuangan.php">Keuangan</a><a href="../checkin.php">Check-in</a></div>
 <?php if ($autoBackup && empty($autoBackup['ok'])): ?><p class="msg err">Backup otomatis gagal: <?= e($autoBackup['msg'] ?? '') ?> &middot; <a href="?p=sistem#backup">lihat Sistem</a></p><?php elseif ($autoBackup): ?><p class="msg">Backup otomatis harian dibuat: <?= e($autoBackup['file']) ?></p><?php endif; ?>
 <?php
 $view = __DIR__ . '/views/' . $p . '.php';

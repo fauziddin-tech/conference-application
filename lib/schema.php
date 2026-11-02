@@ -4,7 +4,7 @@
  * Dipakai oleh install/ (instalasi baru) dan inc.php (upgrade otomatis instalasi lama).
  * Setiap perubahan skema: naikkan DB_VERSION dan tambahkan langkahnya di migrate().
  */
-const DB_VERSION = 9;
+const DB_VERSION = 10;
 
 function colExists(PDO $pdo, $t, $c)
 {
@@ -87,6 +87,19 @@ function migrate(PDO $pdo)
     // --- v8: versi sesi (keluarkan sesi lain saat password diganti) ---
     addCol($pdo, 'users', 'sess_ver', 'INT NOT NULL DEFAULT 0');
 
+    // --- v10: keuangan (angka pembayaran, buku kas, peran bendahara) ---
+    $pdo->exec("ALTER TABLE users MODIFY role ENUM('admin','peserta','reviewer','bendahara') DEFAULT 'peserta'");
+    addCol($pdo, 'registrations', 'pay_currency', 'CHAR(3) NULL');
+    addCol($pdo, 'registrations', 'pay_received', 'DECIMAL(14,2) NULL');
+    addCol($pdo, 'registrations', 'pay_verified_at', 'DATETIME NULL');
+    addCol($pdo, 'registrations', 'pay_verified_by', 'INT NULL');
+    $pdo->exec("CREATE TABLE IF NOT EXISTS cash(id INT AUTO_INCREMENT PRIMARY KEY,entry_date DATE NOT NULL,type ENUM('in','out') NOT NULL,category VARCHAR(100),description VARCHAR(500),amount DECIMAL(14,2) NOT NULL DEFAULT 0,currency CHAR(3) NOT NULL DEFAULT 'IDR',method VARCHAR(30),receipt_file VARCHAR(100),receipt_name VARCHAR(200),created_by INT,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,KEY d(entry_date))$E");
+    // pembayaran yang sudah terverifikasi: isi mata uang & jumlah dari teks biaya
+    if (function_exists('feeParse')) {
+        $up = $pdo->prepare("UPDATE registrations SET pay_currency=?,pay_received=?,pay_verified_at=COALESCE(pay_verified_at,updated_at) WHERE id=?");
+        foreach ($pdo->query("SELECT * FROM registrations WHERE pay_status='verified' AND pay_received IS NULL")->fetchAll() as $r) $up->execute([regCurrency($r), regExpected($r), $r['id']]);
+    }
+
     // Pengaturan baru dengan nilai bawaan (tidak menimpa yang sudah ada)
     $def = [
         'venue_info' => 'Hotel Pangeran Pekanbaru adalah hotel keluarga dan bisnis yang menawarkan layanan terbaik untuk kenyamanan setiap tamu.',
@@ -111,6 +124,9 @@ function migrate(PDO $pdo)
         'site_url' => '', 'housekeep_at' => '',
         // v9: bersihkan .docx saat diunggah
         'docx_strip' => '1',
+        // v10: keuangan
+        'usd_rate' => '', 'fin_cat_out' => "Konsumsi\nAkomodasi & Hotel\nHonorarium Pembicara\nSewa Tempat & Peralatan\nSeminar Kit & Cetak\nSertifikat & Plakat\nTransportasi\nPublikasi & Promosi\nBiaya Bank & Transfer\nLain-lain",
+        'fin_cat_in' => "Sponsor\nBantuan Institusi\nDonasi\nLain-lain",
         'blocked_domains' => 'fextemp.com mailinator.com guerrillamail.com guerrillamail.info sharklasers.com grr.la 10minutemail.com 10minutemail.net temp-mail.org temp-mail.io tempmail.com tempmail.net tempmailo.com tempail.com yopmail.com yopmail.net trashmail.com trashmail.de getnada.com nada.email dispostable.com maildrop.cc throwawaymail.com emailondeck.com mohmal.com fakeinbox.com mintemail.com mytemp.email tmpmail.org tmpmail.net mail.tm 1secmail.com 1secmail.org 1secmail.net mailnesia.com spamgourmet.com mailcatch.com moakt.com emailfake.com fakemail.net burnermail.io inboxkitten.com mailpoof.com tempr.email discard.email spambox.us',
     ];
     $ins = $pdo->prepare("INSERT IGNORE INTO settings(k,v) VALUES(?,?)");

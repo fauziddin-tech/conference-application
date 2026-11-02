@@ -83,6 +83,16 @@ Batas unggah file 10 MB per file — sesuaikan `upload_max_filesize`/`post_max_s
 Email massal dikirim lewat endpoint batch Resend (maks. 100 email per permintaan). Perhatikan kuota paket Resend Anda.
 Hosting harus mengaktifkan ekstensi PHP **cURL**.
 
+## Keuangan (admin & bendahara)
+
+Halaman `keuangan.php` untuk admin dan peran **Bendahara** (dibuat admin di Akun; bendahara hanya bisa membuka Keuangan, bukti bayar, invoice & kwitansi):
+- **Ringkasan**: pemasukan pendaftaran (IDR/USD), menunggu verifikasi, belum bayar, pemasukan lain, pengeluaran, saldo kas, per kategori; total setara IDR bila kurs USD diisi.
+- **Verifikasi Pembayaran**: lihat bukti bayar, catat mata uang & jumlah yang benar-benar diterima, verifikasi/tolak (alasan wajib) + email otomatis; email pengingat ke yang belum bayar.
+- **Pemasukan**: daftar pembayaran terverifikasi dengan filter tanggal/mata uang/kategori, tautan kwitansi, ekspor CSV.
+- **Buku Kas**: catat pengeluaran & pemasukan lain (sponsor, bantuan) dengan nota/bukti; edit, hapus, filter per bulan, ekspor CSV.
+- **Laporan**: laporan keuangan per periode (pemasukan per kategori, pengeluaran per kategori, saldo) siap cetak/PDF dengan tanda tangan Ketua & Bendahara.
+- **Pengaturan**: kurs USD→IDR dan daftar kategori.
+
 ## Dwibahasa (English / Indonesia)
 
 - Situs tampil dalam **bahasa Inggris** secara bawaan; pengunjung beralih lewat tombol **EN | ID** di menu (tersimpan di cookie, ada `hreflang` untuk SEO).
@@ -152,6 +162,8 @@ lib/image.php        optimasi gambar (WebP, rotasi EXIF)
 lib/DocxFontStripper.php  pembersih font tertanam .docx (GPL-3.0, dari docx-font-stripper-ojs33)
 tools/backup-database.php  skrip Cron backup (CLI)
 notifikasi.php       notifikasi di aplikasi
+keuangan.php         keuangan: ringkasan, verifikasi pembayaran, pemasukan, buku kas, laporan
+lib/finance.php      fungsi keuangan (angka biaya, verifikasi, ringkasan)
 assets/qrcode.min.js QRCode.js (MIT)
 uploads/             foto pembicara/logo (publik) dan uploads/private (naskah & bukti bayar)
 ```

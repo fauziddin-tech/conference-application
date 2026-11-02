@@ -272,3 +272,20 @@ section.poster{margin-top:24px}
 .mapf{min-height:320px;border-radius:14px;display:flex;flex-direction:column;gap:10px;align-items:center;justify-content:center;text-align:center;padding:20px;background:linear-gradient(135deg,var(--sand),#d6c4a0);border:1px solid var(--line)}
 .mapf small{font-family:system-ui,sans-serif;color:var(--deep);opacity:.8}
 .sp img{height:auto}
+/* ===== keuangan ===== */
+.stats.fin{grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.stats.fin .stat b{font-size:1.25rem}.stats.fin .stat small{display:block;opacity:.8;margin-top:2px}
+.stat.warn{border-top-color:#c77d1a}.stat.out{border-top-color:#b42323}.stat.bal{border-top-color:var(--deep);background:var(--panel)}
+.tabs .cnt{background:#e5484d;color:#fff;border-radius:99px;padding:0 7px;font-size:.75rem;margin-left:4px}
+.vcard{display:grid;grid-template-columns:1.2fr 1fr;gap:16px;margin-bottom:14px;align-items:start}
+.vinfo{line-height:1.7}.vinfo .btn{margin:6px 8px 0 0;padding:6px 14px;font-size:.88rem}
+.vform{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px}.vform label{margin-bottom:6px}.vbtn{display:flex;gap:10px;flex-wrap:wrap}
+@media(max-width:800px){.vcard{grid-template-columns:1fr}}
+.pos{color:#1f7a3a}.neg{color:#b42323}.muted{opacity:.6}
+.report{max-width:900px;margin:0 auto;padding:28px}
+.rhead{display:flex;gap:14px;align-items:center;border-bottom:3px double var(--deep);padding-bottom:10px;margin-bottom:14px;font-family:system-ui,sans-serif}.rhead img{height:56px}
+.rtab{background:none}.rtab th,.rtab td{border-bottom:1px solid var(--line)}.rtab .r{text-align:right;white-space:nowrap}
+.rtab .rsec td{background:var(--sand);color:var(--deep);font-weight:800;font-family:system-ui,sans-serif}.rtab .rsub td{font-weight:700;font-style:italic}
+.rtab .ind{padding-left:28px}.rtab .rtot td{font-weight:800;border-top:2px solid var(--deep)}.rtab .rgrand td{font-weight:900;font-size:1.05rem;border-top:3px double var(--deep);border-bottom:3px double var(--deep)}
+.rsign{display:flex;justify-content:space-between;gap:20px;margin-top:36px;text-align:center}.rsign div{min-width:220px}.rsign .sg{height:64px}.rsign p{margin:0}
+@media print{.noprint,.tabs,.msg{display:none!important}main{width:100%;padding:0}.report{border:0;box-shadow:none;padding:0;max-width:none}.rtab .rsec td{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
