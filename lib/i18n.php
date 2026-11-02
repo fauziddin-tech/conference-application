@@ -62,7 +62,7 @@ function contentStrings()
     global $pdo;
     $o = [];
     foreach (['about', 'cfp_info', 'venue_info', 'reg_close_msg', 'payment_info', 'invoice_note', 'online_info', 'date', 'time', 'organizer', 'secretariat'] as $k) $o[] = setting($k);
-    foreach (['benefits', 'supporters', 'speakers', 'fees'] as $k) foreach (rows($k) as $r) $o[] = $r[0];
+    foreach (['benefits', 'speakers', 'fees'] as $k) foreach (rows($k) as $r) $o[] = $r[0];
     $fields = ['date' => ['title', 'body'], 'topic' => ['title', 'body'], 'committee' => ['subtitle', 'extra'], 'sponsor' => ['extra'], 'faq' => ['title', 'body'], 'news' => ['title', 'body'], 'download' => ['title'], 'moderator' => ['subtitle']];
     foreach ($pdo->query("SELECT kind,title,subtitle,body,extra FROM items") as $it) foreach ($fields[$it['kind']] ?? [] as $f) $o[] = $it[$f];
     foreach ($pdo->query("SELECT day,title,track,description FROM agenda") as $a) { $o[] = $a['day']; $o[] = $a['title']; $o[] = $a['track']; $o[] = $a['description']; }

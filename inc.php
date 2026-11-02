@@ -384,6 +384,34 @@ function upImage($f, &$err, $prefix = 'img', $maxMb = 8, $optimize = true)
     // perkecil & kompres otomatis (foto pembicara, logo, dll.) agar halaman ringan
     return $optimize ? optimizeImage($d . $fn, imgMax($prefix)) : $fn;
 }
+/**
+ * Teks panjang dari admin → HTML rapi: baris HURUF BESAR (atau diakhiri ":") jadi subjudul,
+ * baris berawalan •, -, *, – jadi daftar, sisanya paragraf. $cards: tiap subjudul jadi kartu dalam grid.
+ */
+function fmtText($s, $cards = false)
+{
+    $s = trim(str_replace("\r", '', (string)$s)); if ($s === '') return '';
+    $isHead = function ($l) { $l = trim($l); return mb_strlen($l) <= 70 && (($l === mb_strtoupper($l) && preg_match('/\p{Lu}{3}/u', $l)) || (preg_match('/:$/', $l) && mb_strlen($l) <= 50 && !preg_match('/^[•\-*–]/u', $l))); };
+    $secs = [['', '']]; $list = false; $para = [];
+    $flush = function () use (&$secs, &$para) { if ($para) { $secs[count($secs) - 1][1] .= '<p>' . implode('<br>', $para) . '</p>'; $para = []; } };
+    foreach (explode("\n", $s) as $l) {
+        $t = trim($l);
+        if (preg_match('/^[•\-*–]\s*(.+)$/u', $t, $m)) { $flush(); if (!$list) { $secs[count($secs) - 1][1] .= '<ul>'; $list = true; } $secs[count($secs) - 1][1] .= '<li>' . e($m[1]) . '</li>'; continue; }
+        if (preg_match('/^(?:[a-z]|\d{1,2})[.)]\s+\S/u', $t)) { $flush(); if (!$list) { $secs[count($secs) - 1][1] .= '<ul>'; $list = true; } $secs[count($secs) - 1][1] .= '<li class="n">' . e($t) . '</li>'; continue; }
+        if ($list) { $secs[count($secs) - 1][1] .= '</ul>'; $list = false; }
+        if ($t === '') { $flush(); continue; }
+        if ($isHead($t)) { $flush(); $secs[] = [rtrim($t, ':'), '']; continue; }
+        $para[] = e($t);
+    }
+    $flush(); if ($list) $secs[count($secs) - 1][1] .= '</ul>';
+    $o = $secs[0][1] !== '' ? '<div class="rlead">' . $secs[0][1] . '</div>' : '';
+    $rest = array_slice($secs, 1);
+    if (!$rest) return '<div class="rich">' . $o . '</div>';
+    $h = function ($t) { return '<h4' . ($t === mb_strtoupper($t) ? ' class="caps"' : '') . '>' . e($t) . '</h4>'; };
+    if ($cards) { $o .= '<div class="rgrid">'; foreach ($rest as $x) $o .= '<div class="rcard">' . $h($x[0]) . $x[1] . '</div>'; $o .= '</div>'; }
+    else foreach ($rest as $x) $o .= $h($x[0]) . $x[1];
+    return '<div class="rich">' . $o . '</div>';
+}
 /** Book of Abstracts (flipbook): jalur PDF relatif terhadap folder situs, '' bila belum ada / tidak valid. */
 function bookFile() { $f = setting('book_pdf'); return $f !== '' && preg_match('#^uploads/[A-Za-z0-9._/-]+\.pdf$#i', $f) && strpos($f, '..') === false && is_file(__DIR__ . '/' . $f) ? $f : ''; }
 function bookOn() { return setting('book_on') === '1' && bookFile() !== ''; }

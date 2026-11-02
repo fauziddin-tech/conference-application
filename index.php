@@ -36,13 +36,13 @@ m.querySelectorAll('a[href$="register.php"]').forEach(function(a){a.addEventList
 <?php if ($news): ?><section class="s fade news"><h2><?= te('Announcements') ?></h2><div class="grid ngrid"><?php foreach (array_slice($news, 0, 3) as $n): ?>
 <article class="card"><small><?= e(fdateL($n['created_at'])) ?></small><h3><?= e(tx($n['title'])) ?></h3><p><?= nl2br(e(tx($n['body']))) ?></p><?php if (isurl($n['url'])): ?><p><a href="<?= e($n['url']) ?>" target="_blank" rel="noopener"><?= te('Read more') ?> &rarr;</a></p><?php endif; ?></article><?php endforeach; ?></div></section><?php endif; ?>
 
-<section id="about" class="s fade"><h2><?= te('About the Conference') ?></h2><div class="two"><div><p><?= nl2br(e(tx(setting('about')))) ?></p></div>
+<section id="about" class="s fade"><h2><?= te('About the Conference') ?></h2><div class="two"><div><?= fmtText(tx(setting('about'))) ?></div>
 <aside class="panel"><h3><?= te('When') ?></h3><p><?= e(tx(setting('date'))) ?><br><?= e(tx(setting('time'))) ?></p><h3><?= te('Where') ?></h3><p><?= e(setting('location')) ?></p><h3><?= te('Format') ?></h3><p><?= te('Hybrid (offline & online)') ?></p>
 <?php if ($b = rows('benefits')): ?><h3><?= te('Benefits') ?></h3><ul><?php foreach ($b as $x): ?><li><?= e(tx($x[0])) ?></li><?php endforeach; ?></ul><?php endif; ?>
-<?php if ($sp = rows('supporters')): ?><h3><?= te('Supported by') ?></h3><ul><?php foreach ($sp as $x): ?><li><?= e(tx($x[0])) ?></li><?php endforeach; ?></ul><?php endif; ?></aside></div></section>
+<?php if ($sp = rows('supporters')): ?><h3><?= te('Supported by') ?></h3><ul><?php foreach ($sp as $x): ?><li><?= e($x[0]) ?></li><?php endforeach; ?></ul><?php endif; ?></aside></div></section>
 
-<?php if ($dates = items('date')): ?><section id="dates" class="s fade"><h2><?= te('Important Dates') ?></h2><ol class="timeline"><?php foreach ($dates as $d): $past = $d['extra'] && $d['extra'] < date('Y-m-d'); ?>
-<li class="<?= $past ? 'past' : '' ?>"><time datetime="<?= e($d['extra']) ?>"><?= e(fdateL($d['extra'])) ?></time><b><?= e(tx($d['title'])) ?></b><?php if ($d['body']): ?><small><?= e(tx($d['body'])) ?></small><?php endif; ?><?php if ($past): ?><span class="tag"><?= te('Closed') ?></span><?php endif; ?></li><?php endforeach; ?></ol></section><?php endif; ?>
+<?php if ($dates = items('date')): ?><section id="dates" class="s fade"><h2><?= te('Important Dates') ?></h2><ol class="timeline"><?php $nx = false; foreach ($dates as $d): $past = $d['extra'] && $d['extra'] < date('Y-m-d'); $next = !$past && !$nx && $d['extra'] && strtotime($d['extra']); if ($next) { $nx = true; $dl = (int)round((strtotime($d['extra']) - strtotime(date('Y-m-d'))) / 86400); } ?>
+<li class="<?= $past ? 'past' : ($next ? 'next' : '') ?>"><time datetime="<?= e($d['extra']) ?>"><?= e(fdateL($d['extra'])) ?></time><b><?= e(tx($d['title'])) ?></b><?php if ($d['body']): ?><small><?= e(tx($d['body'])) ?></small><?php endif; ?><?php if ($past): ?><span class="tag"><?= te('Closed') ?></span><?php elseif ($next): ?><span class="tag soon"><?= $dl === 0 ? te('Today') : ($dl === 1 ? te('Tomorrow') : te('In %d days', $dl)) ?></span><?php endif; ?></li><?php endforeach; ?></ol></section><?php endif; ?>
 
 <section id="speakers" class="s fade"><h2><?= te('Speakers') ?></h2>
 <?php
@@ -59,7 +59,7 @@ foreach ($keys as $k): $pr = $pri($k); $sz = [2, 1.5, 1, 2, 1.5][$pr]; $cl = ['k
 <?php endforeach; ?></section>
 
 <?php $topics = items('topic'); $dl = items('download'); if ($topics || setting('cfp_info') || $dl): ?>
-<section id="cfp" class="s fade"><h2><?= te('Call for Papers') ?></h2><?php if (setting('cfp_info')): ?><p><?= nl2br(e(tx(setting('cfp_info')))) ?></p><?php endif; ?>
+<section id="cfp" class="s fade"><h2><?= te('Call for Papers') ?></h2><?php if (setting('cfp_info')): ?><?= fmtText(tx(setting('cfp_info')), true) ?><?php endif; ?>
 <?php if ($topics): ?><h3 class="center"><?= te('Conference Topics / Tracks') ?></h3><div class="topics"><?php foreach ($topics as $t): ?><div class="topic"><b><?= e(tx($t['title'])) ?></b><?php if ($t['body']): ?><small><?= e(tx($t['body'])) ?></small><?php endif; ?></div><?php endforeach; ?></div><?php endif; ?>
 <?php if ($dl): ?><h3 class="center"><?= te('Downloads & Guidelines') ?></h3><p class="center dl"><?php foreach ($dl as $d): ?><a class="btn ghost2" href="<?= e(isurl($d['url']) ? $d['url'] : imgSrc($d['url'])) ?>" target="_blank" rel="noopener">&#8681; <?= e(tx($d['title'])) ?></a> <?php endforeach; ?></p><?php endif; ?>
 <p class="center"><a class="btn big" href="<?= $reg ?>"><?= te('Submit Abstract / Paper') ?></a></p></section><?php endif; ?>
@@ -101,5 +101,5 @@ foreach ($keys as $k): $pr = $pri($k); $sz = [2, 1.5, 1, 2, 1.5][$pr]; $cl = ['k
 <section id="contact" class="s fade"><h2><?= te('Contact') ?></h2><div class="cg">
 <div class="card ci"><h3><?= te('Address') ?></h3><p><?= e(tx(setting('secretariat'))) ?></p></div>
 <?php if ($cs = rows('contacts')): ?><div class="card ci"><h3>WhatsApp</h3><?php foreach ($cs as $c): ?><p><?= e($c[0]) ?><br><a href="https://wa.me/<?= preg_replace('/\D/', '', $c[1] ?? '') ?>" target="_blank" rel="noopener"><?= e($c[1] ?? '') ?></a></p><?php endforeach; ?></div><?php endif; ?>
-<div class="card ci"><h3>Email &amp; Web</h3><?php if ($em): ?><p><a href="mailto:<?= e($em) ?>"><?= e($em) ?></a></p><?php endif; ?><?php if (setting('website')): ?><p><?= e(setting('website')) ?></p><?php endif; ?></div></div></section>
+<div class="card ci"><h3>Email &amp; Web</h3><?php if ($em): ?><p><a href="mailto:<?= e($em) ?>"><?= e($em) ?></a></p><?php endif; ?><?php if ($ws = setting('website')): $wu = isurl($ws) ? $ws : 'https://' . ltrim($ws, '/'); ?><p><a href="<?= e($wu) ?>" target="_blank" rel="noopener"><?= e(preg_replace('#^https?://#i', '', rtrim($ws, '/'))) ?></a></p><?php endif; ?></div></div></section>
 <?php foot();

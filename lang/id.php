@@ -408,4 +408,7 @@ return [
     'Download PDF' => 'Unduh PDF',
     'Full screen' => 'Layar penuh',
     '%s: maximum size is %d MB.' => '%s: ukuran maksimal %d MB.',
+    'Today' => 'Hari ini',
+    'Tomorrow' => 'Besok',
+    'In %d days' => '%d hari lagi',
 ];
