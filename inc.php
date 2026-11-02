@@ -408,7 +408,23 @@ function fmtText($s, $cards = false)
     $rest = array_slice($secs, 1);
     if (!$rest) return '<div class="rich">' . $o . '</div>';
     $h = function ($t) { return '<h4' . ($t === mb_strtoupper($t) ? ' class="caps"' : '') . '>' . e($t) . '</h4>'; };
-    if ($cards) { $o .= '<div class="rgrid">'; foreach ($rest as $x) $o .= '<div class="rcard">' . $h($x[0]) . $x[1] . '</div>'; $o .= '</div>'; }
+    if ($cards) {
+        // kartu dengan daftar panjang dibuat selebar penuh (daftar 2 kolom); kartu lain berjajar sama tinggi
+        $ic = function ($t) {
+            $p = ['guideline|submission|panduan|ketentuan|naskah' => '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
+                'review|telaah|seleksi' => '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M8.5 11l2 2 3.5-3.5"/>',
+                'present|presentasi' => '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+                'publi|jurnal|journal' => '<path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/>',
+                'fee|biaya|payment|pembayaran' => '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
+                'date|tanggal|deadline|jadwal' => '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>'];
+            foreach ($p as $re => $svg) if (preg_match('/' . $re . '/i', $t)) return '<span class="ric" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' . $svg . '</svg></span>';
+            return '<span class="ric" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg></span>';
+        };
+        $wide = []; $small = [];
+        foreach ($rest as $x) { if (substr_count($x[1], '<li') >= 4 || mb_strlen(strip_tags($x[1])) > 650) $wide[] = $x; else $small[] = $x; }
+        foreach ($wide as $x) $o .= '<div class="rcard wide"><div class="rch">' . $ic($x[0]) . $h($x[0]) . '</div>' . $x[1] . '</div>';
+        if ($small) { $o .= '<div class="rgrid n' . min(count($small), 4) . '">'; foreach ($small as $x) $o .= '<div class="rcard"><div class="rch">' . $ic($x[0]) . $h($x[0]) . '</div>' . $x[1] . '</div>'; $o .= '</div>'; }
+    }
     else foreach ($rest as $x) $o .= $h($x[0]) . $x[1];
     return '<div class="rich">' . $o . '</div>';
 }
