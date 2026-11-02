@@ -12,6 +12,7 @@ Ditulis dengan PHP + MySQL tanpa framework, sehingga bisa langsung diunggah ke s
 - **Call for Papers**: topik/track, unduhan template & panduan
 - **Program** per hari (tab), biaya registrasi dengan **early bird** otomatis, langkah pendaftaran
 - Lokasi + peta, jurnal publikasi, **FAQ**, kontak WhatsApp/email
+- **Book of Abstracts (flipbook)** di `book.php`: PDF dibaca seperti buku yang dibalik per halaman (PDF.js dari cdnjs), dua halaman di layar lebar / satu di ponsel, suara balik halaman, layar penuh, unduh PDF, link wajib (mis. konfirmasi kehadiran) dan link Zoom khusus peserta online terverifikasi. Diatur di Admin → Publikasi
 - Halaman **verifikasi dokumen** publik (QR pada sertifikat/LoA)
 - Tampilan responsif, mode gelap otomatis, aksesibilitas dasar (skip link, aria)
 

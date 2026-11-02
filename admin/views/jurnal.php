@@ -1,4 +1,18 @@
-<?php if (!defined('ADMIN')) exit; ?>
+<?php if (!defined('ADMIN')) exit; $bf = bookFile(); ?>
+<h3 id="buku">Book of Abstracts (Flipbook)</h3>
+<p><small>Unggah PDF Book of Abstracts / buku program; pengunjung membacanya seperti buku yang dibalik per halaman di <a href="../book.php" target="_blank">book.php</a>. Halaman PDF dirender langsung di browser, jadi tidak perlu mengubah PDF menjadi gambar.</small></p>
+<form method="post" enctype="multipart/form-data" class="card"><?= csrf() ?><input type="hidden" name="a" value="bookset">
+<label class="chk full"><input type="checkbox" name="book_on" value="1" <?= setting('book_on') === '1' ? 'checked' : '' ?>> <span><b>Tampilkan Book of Abstracts</b> (tombol muncul di beranda, bagian Program, dan dashboard peserta)</span></label>
+<label>File PDF <small><?= $bf ? 'Saat ini: ' . e(setting('book_name') ?: basename($bf)) . ' (' . (($sz = filesize(__DIR__ . '/../../' . $bf)) >= 1048576 ? round($sz / 1048576, 1) . ' MB' : ceil($sz / 1024) . ' KB') . '). Unggah lagi untuk mengganti.' : 'maks. 80 MB, tetapi juga dibatasi server: ' . e(ini_get('upload_max_filesize')) ?></small><input type="file" name="book" accept="application/pdf,.pdf"></label>
+<label>atau nama file di server <small>untuk PDF besar: unggah via File Manager cPanel ke folder <code>uploads</code>, lalu tulis namanya, mis. <code>book-of-abstracts.pdf</code></small><input name="book_path" value="<?= $bf && strpos($bf, 'uploads/dl_') !== 0 ? e(substr($bf, 8)) : '' ?>" placeholder="book-of-abstracts.pdf"></label>
+<label>Judul publikasi<input name="book_title" value="<?= e(setting('book_title')) ?>" placeholder="Book of Abstracts &amp; Conference Programme"></label>
+<label class="chk"><input type="checkbox" name="book_zoom" value="1" <?= setting('book_zoom', '1') === '1' ? 'checked' : '' ?>> <span>Tampilkan link Zoom di halaman buku <small>(hanya untuk peserta online terverifikasi &amp; admin yang sedang login)</small></span></label>
+<label>Link tambahan: label <small>mis. Konfirmasi Kehadiran</small><input name="book_link_label" value="<?= e(setting('book_link_label')) ?>" placeholder="Konfirmasi Kehadiran"></label>
+<label>Link tambahan: URL<input name="book_link_url" value="<?= e(setting('book_link_url')) ?>" placeholder="https://forms.gle/..."></label>
+<label>Link tambahan: keterangan<input name="book_link_note" value="<?= e(setting('book_link_note')) ?>" placeholder="Semua pemakalah dan peserta wajib memilih hadir luring atau daring."></label>
+<label class="chk"><input type="checkbox" name="book_link_req" value="1" <?= setting('book_link_req') === '1' ? 'checked' : '' ?>> <span>Tandai link tambahan sebagai <b>WAJIB</b> (disorot &amp; muncul juga di toolbar buku)</span></label>
+<?php if ($bf): ?><label class="chk full"><input type="checkbox" name="book_rm" value="1"> <span>Hapus file PDF</span></label><?php endif; ?>
+<div class="full vbtn"><button class="btn">Simpan</button><?php if ($bf): ?><a class="btn ghost2" href="../book.php" target="_blank">Lihat Buku</a><?php endif; ?></div></form>
 <h3>Tambah Jurnal</h3><form method="post" class="card"><?= csrf() ?><input type="hidden" name="a" value="jradd">
 <label>Nama jurnal *<input name="name" required></label><label>Link / URL jurnal<input name="url" placeholder="https://..."></label>
 <label>Akreditasi / indeks<input name="accr" placeholder="SINTA 2 / Scopus Q3"></label><label>Penerbit<input name="publisher"></label>

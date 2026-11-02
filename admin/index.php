@@ -171,6 +171,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($a === 'jredit') { $r = jrow(); if ($r[0] === '') $msg = 'Nama jurnal wajib diisi.'; else { $rs[$i] = $r; saveRows('journals', $rs, 9); $msg = 'Data jurnal diperbarui.'; } }
         else { array_splice($rs, $i, 1); saveRows('journals', $rs, 9); $msg = 'Jurnal dihapus.'; }
         break;
+    case 'bookset': // Book of Abstracts (flipbook)
+        $back = '?p=jurnal';
+        foreach (['book_title', 'book_link_label', 'book_link_url', 'book_link_note'] as $k) setSetting($k, trim((string)($_POST[$k] ?? '')));
+        foreach (['book_on', 'book_link_req', 'book_zoom'] as $k) setSetting($k, empty($_POST[$k]) ? '0' : '1');
+        $note = [];
+        if (setting('book_link_url') !== '' && !isurl(setting('book_link_url'))) { setSetting('book_link_url', ''); $note[] = 'Link tambahan harus diawali https:// (dikosongkan).'; }
+        $old = setting('book_pdf'); $mine = strpos($old, 'uploads/dl_') === 0; // hanya hapus file yang diunggah lewat sini
+        if (!empty($_POST['book_rm'])) { if ($mine) @unlink(__DIR__ . '/../' . $old); setSetting('book_pdf', ''); setSetting('book_name', ''); $note[] = 'File PDF dihapus.'; }
+        if (!empty($_FILES['book']['name'])) {
+            $er = ''; $f = upFile($_FILES['book'], ['pdf'], $er, 'File PDF', true, 80);
+            if ($f) { if ($mine && empty($_POST['book_rm'])) @unlink(__DIR__ . '/../' . $old); setSetting('book_pdf', 'uploads/' . $f[0]); setSetting('book_name', $f[1]); $note[] = 'PDF "' . $f[1] . '" diunggah.'; }
+            else $note[] = $er . ' Untuk file besar, unggah lewat File Manager cPanel ke folder uploads lalu isi kolom "atau nama file di server".';
+        } elseif (($pth = ltrim(trim(post('book_path')), '/')) !== '' && $pth !== $old) {
+            if (strpos($pth, 'uploads/') !== 0) $pth = 'uploads/' . $pth;
+            if (preg_match('#^uploads/[A-Za-z0-9._/-]+\.pdf$#i', $pth) && strpos($pth, '..') === false && is_file(__DIR__ . '/../' . $pth)) { if ($mine) @unlink(__DIR__ . '/../' . $old); setSetting('book_pdf', $pth); setSetting('book_name', basename($pth)); $note[] = 'Memakai file ' . $pth . '.'; }
+            else $note[] = 'File "' . $pth . '" tidak ditemukan (nama file hanya boleh huruf, angka, titik, minus, garis bawah; berakhiran .pdf).';
+        }
+        if (setting('book_on') === '1' && !bookFile()) $note[] = 'Buku belum tampil karena file PDF belum ada.';
+        $msg = trim('Pengaturan Book of Abstracts disimpan. ' . implode(' ', $note)); break;
     case 'spadd':
         $n = clean(post('name'));
         if ($n === '') { $msg = 'Nama pembicara wajib diisi.'; break; }
@@ -298,7 +317,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     flash($msg ?? 'Perubahan disimpan.'); go($back ?? '?p=' . $p . (isset($_GET['k']) ? '&k=' . urlencode($_GET['k']) : ''));
 }
 
-$TABS = ['ringkasan' => 'Ringkasan', 'peserta' => 'Peserta', 'naskah' => 'Naskah & Review', 'pengguna' => 'Akun', 'pembicara' => 'Pembicara', 'konten' => 'Konten', 'agenda' => 'Agenda', 'jurnal' => 'Jurnal', 'email' => 'Email', 'setting' => 'Pengaturan', 'terjemahan' => 'Terjemahan', 'sistem' => 'Sistem'];
+$TABS = ['ringkasan' => 'Ringkasan', 'peserta' => 'Peserta', 'naskah' => 'Naskah & Review', 'pengguna' => 'Akun', 'pembicara' => 'Pembicara', 'konten' => 'Konten', 'agenda' => 'Agenda', 'jurnal' => 'Publikasi', 'email' => 'Email', 'setting' => 'Pengaturan', 'terjemahan' => 'Terjemahan', 'sistem' => 'Sistem'];
 head('Admin'); ?>
 <h2>Panel Admin</h2><div class="tabs"><?php foreach ($TABS as $k => $l): ?><a href="?p=<?= $k ?>" class="<?= $p === $k || ($k === 'peserta' && $p === 'detail') || ($k === 'pengguna' && $p === 'edit') ? 'on' : '' ?>"><?= e($l) ?></a><?php endforeach; ?><a href="../keuangan.php">Keuangan</a><a href="../checkin.php">Check-in</a></div>
 <?php if ($autoBackup && empty($autoBackup['ok'])): ?><p class="msg err">Backup otomatis gagal: <?= e($autoBackup['msg'] ?? '') ?> &middot; <a href="?p=sistem#backup">lihat Sistem</a></p><?php elseif ($autoBackup): ?><p class="msg">Backup otomatis harian dibuat: <?= e($autoBackup['file']) ?></p><?php endif; ?>

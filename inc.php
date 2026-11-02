@@ -333,13 +333,13 @@ function magicOk($p, $ext)
     foreach ($m[$ext] ?? [] as $x) if (strpos($h, $x) === 0) return true;
     return false;
 }
-function upFile($f, $exts, &$err, $label, $public = false)
+function upFile($f, $exts, &$err, $label, $public = false, $maxMb = 10)
 {
     $err = '';
     if (!$f || ($f['error'] ?? 4) === 4) { $err = t('%s: no file selected.', $label); return null; }
     if (in_array($f['error'], [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)) { $err = t('%s: the file exceeds the server upload limit (%s).', $label, ini_get('upload_max_filesize')); return null; }
     if ($f['error'] !== 0) { $err = t('%s: upload failed (the file may exceed the server limit).', $label); return null; }
-    if ($f['size'] > 10485760) { $err = t('%s: maximum size is 10 MB.', $label); return null; }
+    if ($f['size'] > $maxMb * 1048576) { $err = $maxMb == 10 ? t('%s: maximum size is 10 MB.', $label) : t('%s: maximum size is %d MB.', $label, $maxMb); return null; }
     $ext = strtolower(pathinfo($f['name'], PATHINFO_EXTENSION));
     if (!in_array($ext, $exts, true) || !magicOk($f['tmp_name'], $ext)) { $err = t('%s: the format must be %s.', $label, strtoupper(implode('/', $exts))); return null; }
     $d = __DIR__ . ($public ? '/uploads/' : '/uploads/private/');
@@ -384,6 +384,9 @@ function upImage($f, &$err, $prefix = 'img', $maxMb = 8, $optimize = true)
     // perkecil & kompres otomatis (foto pembicara, logo, dll.) agar halaman ringan
     return $optimize ? optimizeImage($d . $fn, imgMax($prefix)) : $fn;
 }
+/** Book of Abstracts (flipbook): jalur PDF relatif terhadap folder situs, '' bila belum ada / tidak valid. */
+function bookFile() { $f = setting('book_pdf'); return $f !== '' && preg_match('#^uploads/[A-Za-z0-9._/-]+\.pdf$#i', $f) && strpos($f, '..') === false && is_file(__DIR__ . '/' . $f) ? $f : ''; }
+function bookOn() { return setting('book_on') === '1' && bookFile() !== ''; }
 function rmImage($fn) { if ($fn && !isurl($fn)) @unlink(__DIR__ . '/uploads/' . basename($fn)); }
 function imgSrc($v) { return isurl($v) ? $v : BASE . 'uploads/' . rawurlencode(basename((string)$v)); }
 
@@ -446,7 +449,7 @@ function foot()
 {
     $H = BASE; $em = setting('email'); ?></main><footer><div class="fgrid">
 <div><b><?= e(setting('name')) ?></b><p><?= e(setting('tagline')) ?></p><?php if (setting('organizer')): ?><p><small><?= te('Organized by') ?> <?= e(tx(setting('organizer'))) ?></small></p><?php endif; ?></div>
-<div><h4><?= te('Links') ?></h4><a href="<?= $H ?>#about"><?= te('About') ?></a><a href="<?= $H ?>#dates"><?= te('Important Dates') ?></a><a href="<?= $H ?>#program"><?= te('Program') ?></a><a href="<?= $H ?>#register"><?= te('Registration') ?></a><a href="<?= $H ?>#faq">FAQ</a><a href="<?= $H ?>verify.php"><?= te('Verify Certificate') ?></a><?php if (setting('event_start')): ?><a href="<?= $H ?>calendar.php"><?= te('Add to Calendar') ?></a><?php endif; ?></div>
+<div><h4><?= te('Links') ?></h4><a href="<?= $H ?>#about"><?= te('About') ?></a><a href="<?= $H ?>#dates"><?= te('Important Dates') ?></a><a href="<?= $H ?>#program"><?= te('Program') ?></a><a href="<?= $H ?>#register"><?= te('Registration') ?></a><a href="<?= $H ?>#faq">FAQ</a><?php if (bookOn()): ?><a href="<?= $H ?>book.php"><?= te('Book of Abstracts') ?></a><?php endif; ?><a href="<?= $H ?>verify.php"><?= te('Verify Certificate') ?></a><?php if (setting('event_start')): ?><a href="<?= $H ?>calendar.php"><?= te('Add to Calendar') ?></a><?php endif; ?></div>
 <div><h4><?= te('Contact') ?></h4><p><?= e(tx(setting('secretariat'))) ?></p><?php if ($em): ?><p><a href="mailto:<?= e($em) ?>"><?= e($em) ?></a></p><?php endif; ?></div></div>
 <div class="copy">&copy; <?= date('Y') ?> <?= e(setting('name')) ?></div></footer><a href="#top" class="totop" aria-label="<?= te('Back to top') ?>">&uarr;</a>
 <script>
@@ -521,6 +524,7 @@ function housekeeping()
 function agenda()
 {
     global $pdo;
+    if (bookOn()) echo '<div class="bookcta"><a class="btn" href="' . BASE . 'book.php"><svg class="ic" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg>' . e(tx(setting('book_title') ?: 'Book of Abstracts')) . '</a></div>';
     $r = agendaRows();
     if (!$r) { echo '<p class="center">' . te('The program will be announced soon.') . '</p>'; return; }
     $G = []; foreach ($r as $a) $G[$a['day']][] = $a;
