@@ -186,6 +186,8 @@ function boaBuild(array $o, &$count = 0)
     // --- panitia ---
     if (isset($sec['committee'])) {
         $cm = items('committee');
+        // dekan & panitia inti yang diinput di menu Pembicara ikut tampil di sini
+        foreach (rows('speakers') as $x) if (boaIsCommittee($x[0] ?? '')) $cm[] = ['title' => $x[1] ?? '', 'subtitle' => $x[0], 'body' => $x[2] ?? '', 'extra' => preg_match('/\bdean\b|dekan|rector|rektor/i', $x[0]) ? 'Patrons' : 'Organizing Committee'];
         $d->h(1, 'Committees');
         if (!$cm) $d->p($ph('Add the committee members in Admin → Konten → Komite'));
         $groups = [];
@@ -219,7 +221,7 @@ function boaBuild(array $o, &$count = 0)
 
     // --- pembicara ---
     if (isset($sec['speakers'])) {
-        $sp = rows('speakers');
+        $sp = array_values(array_filter(rows('speakers'), function ($x) { return !boaIsCommittee($x[0] ?? ''); }));
         $d->h(1, 'Keynote and Invited Speakers');
         if (!$sp) $d->p($ph('Add the speakers in Admin → Pembicara'));
         foreach ($sp as $s) {
@@ -285,6 +287,9 @@ function boaBuild(array $o, &$count = 0)
     $tmp = tempnam(sys_get_temp_dir(), 'boa');
     return $d->save($tmp, 'Book of Abstracts - ' . $name, $short . ' ' . $year . ' · Book of Abstracts') ? $tmp : null;
 }
+
+/** Peran pimpinan/panitia (bukan pembicara): dekan, ketua, sekretaris, bendahara, panitia. */
+function boaIsCommittee($role) { return (bool)preg_match('/\bdean\b|dekan|chair|ketua|secretar|sekretar|treasur|bendahara|committee|panitia/i', (string)$role); }
 
 /** Institusi pendaftar (kolom registrasi; cadangan dari akun). */
 function regInstitution($x) { return trim((string)($x['institution'] ?? '')); }
