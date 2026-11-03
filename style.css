@@ -326,3 +326,8 @@ form.boa fieldset{border:1px solid var(--line);border-radius:8px;padding:8px 14p
 .rich li.n{list-style:none;margin-left:-20px}
 @media(max-width:900px){.rgrid.n3,.rgrid.n4{grid-template-columns:repeat(2,minmax(0,1fr))}.rcard.wide ul{columns:1}}
 @media(max-width:600px){.rgrid.n2,.rgrid.n3,.rgrid.n4{grid-template-columns:1fr}}
+/* logo kampus di banner beranda: lencana putih bulat agar logo berwarna tetap kontras di latar hijau */
+.hero-logo{width:128px;height:128px;margin:-18px auto 16px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;padding:13px;box-shadow:0 0 0 5px rgba(212,163,115,.6),0 14px 30px -10px rgba(0,0,0,.45)}
+.hero-logo img{width:100%;height:100%;object-fit:contain;display:block}
+@media(max-width:600px){.hero-logo{width:88px;height:88px;padding:12px;margin:-24px auto 12px}}
+@media(max-width:420px){.countdown{gap:6px;flex-wrap:nowrap}.countdown span{min-width:0;flex:1;max-width:72px;padding:7px 2px;font-size:.62rem}.countdown b{font-size:1.4rem}}

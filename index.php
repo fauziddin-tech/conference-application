@@ -18,7 +18,7 @@ if ($startIso) {
     $ld = '<script type="application/ld+json">' . json_encode($ev, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) . '</script>';
 }
 head(t('Home'), $ld); ?>
-<section class="hero"><?php if (setting('organizer')): ?><p class="kicker"><?= e(tx(setting('organizer'))) ?></p><?php endif; ?>
+<section class="hero"><?php if ($hl = heroLogo()): ?><div class="hero-logo"><img src="<?= e($hl) ?>" alt="<?= e(setting('organizer') ?: 'Logo') ?>" width="260" height="230" decoding="async" fetchpriority="high"></div><?php endif; ?><?php if (setting('organizer')): ?><p class="kicker"><?= e(tx(setting('organizer'))) ?></p><?php endif; ?>
 <h1><?= e(setting('name')) ?></h1><p class="theme"><?= e(setting('tagline')) ?></p>
 <p><b><?= e(tx(setting('date'))) ?></b> &middot; <?= e(tx(setting('time'))) ?> &middot; <?= e(setting('location')) ?></p>
 <?php if ($startIso && strtotime($start) > time()): ?><div class="countdown" data-countdown="<?= e($startIso) ?>" aria-label="<?= te('Event countdown') ?>"><span><b>-</b><?= te('days') ?></span><span><b>-</b><?= te('hours') ?></span><span><b>-</b><?= te('min') ?></span><span><b>-</b><?= te('sec') ?></span></div><?php endif; ?>

@@ -305,7 +305,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (setting('site_url') !== '') setSetting('site_url', rtrim(setting('site_url'), '/') . '/');
         if (setting('logo_url') !== '' && !isurl(setting('logo_url')) && !is_file(__DIR__ . '/../uploads/' . basename(setting('logo_url')))) { setSetting('logo_url', ''); $bad[] = 'URL logo'; }
         if ($bad) $msg = 'Pengaturan disimpan, tetapi isian berikut dikosongkan karena bukan alamat http(s):// yang valid: ' . implode(', ', $bad) . '.';
-        foreach (['reg_open', 'cert_open', 'cert_checkin', 'blind_review', 'paper_word_only', 'cert_reviewer', 'poster_popup', 'docx_strip'] as $k) setSetting($k, empty($_POST[$k]) ? '0' : '1');
+        foreach (['reg_open', 'cert_open', 'cert_checkin', 'blind_review', 'paper_word_only', 'cert_reviewer', 'poster_popup', 'docx_strip', 'hero_logo_off'] as $k) setSetting($k, empty($_POST[$k]) ? '0' : '1');
         if (isset($_POST['review_days'])) setSetting('review_days', (string)max(1, min(90, (int)$_POST['review_days'])));
         if (isset($_POST['mail_driver'])) setSetting('mail_driver', post('mail_driver') === 'resend' ? 'resend' : 'mail');
         if (!empty($_POST['resend_key_clear'])) setSetting('resend_key', '');
@@ -321,6 +321,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($fn) { rmImage(setting('poster')); rmImage(setting('poster_orig')); setSetting('poster_orig', $fn); setSetting('poster', optimizeImage(__DIR__ . '/../uploads/' . $fn, imgMax('poster'), 82, true)); }
             else $msg = 'Poster: ' . $er;
         }
+        if (!empty($_POST['hero_logo_rm'])) { rmImage(setting('hero_logo')); setSetting('hero_logo', ''); }
+        if (!empty($_FILES['hero_logo']['name'])) { $er = ''; $fn = upImage($_FILES['hero_logo'], $er, 'logo'); if ($fn) { rmImage(setting('hero_logo')); setSetting('hero_logo', $fn); } else $msg = $er; }
         if (!empty($_FILES['logo']['name'])) { $er = ''; $fn = upImage($_FILES['logo'], $er, 'logo'); if ($fn) { rmImage(setting('logo_url')); setSetting('logo_url', $fn); } else $msg = $er; }
         $msg = $msg ?? 'Pengaturan disimpan.'; break;
     }

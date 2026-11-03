@@ -432,6 +432,8 @@ function fmtText($s, $cards = false)
 function bookFile() { $f = setting('book_pdf'); return $f !== '' && preg_match('#^uploads/[A-Za-z0-9._/-]+\.pdf$#i', $f) && strpos($f, '..') === false && is_file(__DIR__ . '/' . $f) ? $f : ''; }
 function bookOn() { return setting('book_on') === '1' && bookFile() !== ''; }
 function rmImage($fn) { if ($fn && !isurl($fn)) @unlink(__DIR__ . '/uploads/' . basename($fn)); }
+/** Logo kampus di banner beranda: unggahan admin, atau logo Universitas Pahlawan bawaan. */
+function heroLogo() { if (setting('hero_logo_off') === '1') return ''; return setting('hero_logo') ? imgSrc(setting('hero_logo')) : BASE . 'assets/logo-up.webp'; }
 function imgSrc($v) { return isurl($v) ? $v : BASE . 'uploads/' . rawurlencode(basename((string)$v)); }
 
 /* ---------- ekspor CSV (aman untuk Excel) ---------- */
