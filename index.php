@@ -54,7 +54,7 @@ if (isset($G['~committee'])) { $cr = function ($r) { return preg_match('/chair|k
 $pri = function ($r) { return $r === '~dean' ? 3 : ($r === '~committee' ? 4 : (stripos($r, 'open speech') !== false ? 0 : (stripos($r, 'keynote') !== false ? 1 : 2))); };
 $keys = array_keys($G); $ord = array_flip($keys);
 usort($keys, function ($a, $b) use ($pri, $ord) { $d = $pri($a) <=> $pri($b); return $d ?: ($ord[$a] <=> $ord[$b]); });
-foreach ($keys as $k): $pr = $pri($k); $sz = [2, 1.5, 1, 2, 1.5][$pr]; $cl = ['k2', 'k15', 'k1', 'k2', 'k15'][$pr]; ?>
+foreach ($keys as $k): $pr = $pri($k); $sz = [2, 1.5, 1, 2, 1.5][$pr]; $cl = ['k2', 'k15', 'k1', 'k2', 'k15'][$pr] . ' ' . ['g-open', 'g-key', 'g-other', 'g-dean', 'g-com'][$pr]; ?>
 <div class="spgroup <?= $cl ?>" style="--k:<?= $sz ?>"><?php foreach ($G[$k] as $s): ?><div class="card sp"><?php if (!empty($s[3])): ?><img src="uploads/<?= e($s[3]) ?>" alt="<?= e($s[1] ?? '') ?>" loading="lazy" decoding="async"<?= imgDims($s[3]) ?>><?php else: ?><div class="ph" aria-hidden="true"><?= e(initials($s[1] ?? '')) ?></div><?php endif; ?><small><?= e(tx($s[0])) ?></small><b><?= e($s[1] ?? '') ?></b><span><?= e($s[2] ?? '') ?></span></div><?php endforeach; ?></div>
 <?php endforeach; ?></section>
 

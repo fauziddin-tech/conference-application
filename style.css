@@ -331,3 +331,14 @@ form.boa fieldset{border:1px solid var(--line);border-radius:8px;padding:8px 14p
 .hero-logo img{width:100%;height:100%;object-fit:contain;display:block}
 @media(max-width:600px){.hero-logo{width:88px;height:88px;padding:12px;margin:-24px auto 12px}}
 @media(max-width:420px){.countdown{gap:6px;flex-wrap:nowrap}.countdown span{min-width:0;flex:1;max-width:72px;padding:7px 2px;font-size:.62rem}.countdown b{font-size:1.4rem}}
+/* warna aksen kartu pembicara per kelompok peran (garis atas + label peran) */
+.spgroup{--acc:var(--tan);--acc-t:#8a6420}
+.spgroup.g-open{--acc:#c8963e;--acc-t:#8a6420}
+.spgroup.g-key{--acc:#27706f;--acc-t:#27706f}
+.spgroup.g-other{--acc:#3b6ea5;--acc-t:#2f5d8a}
+.spgroup.g-dean{--acc:#7a5a9e;--acc-t:#634585}
+.spgroup.g-com{--acc:#c0703f;--acc-t:#9a4f28}
+.spgroup .sp{border-top:5px solid var(--acc)}
+.spgroup .sp small{color:var(--acc-t)}
+.spgroup .sp img,.spgroup .sp .ph{box-shadow:0 0 0 1px color-mix(in srgb,var(--acc) 30%,transparent)}
+.spgroup .sp{background:linear-gradient(180deg,color-mix(in srgb,var(--acc) 9%,var(--card)) 0,var(--card) 110px)}
