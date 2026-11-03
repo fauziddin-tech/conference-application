@@ -342,3 +342,8 @@ form.boa fieldset{border:1px solid var(--line);border-radius:8px;padding:8px 14p
 .spgroup .sp small{color:var(--acc-t)}
 .spgroup .sp img,.spgroup .sp .ph{box-shadow:0 0 0 1px color-mix(in srgb,var(--acc) 30%,transparent)}
 .spgroup .sp{background:linear-gradient(180deg,color-mix(in srgb,var(--acc) 9%,var(--card)) 0,var(--card) 110px)}
+/* kelola jurnal */
+.jno{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--teal);color:#fff;font:700 .75rem system-ui,sans-serif;margin-right:8px;vertical-align:middle}
+.jract{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+.danger-link{color:#b42323!important}
+.link.mv{color:var(--c)!important}

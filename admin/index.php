@@ -29,9 +29,7 @@ function audienceRows($a)
     return $pdo->query("SELECT u.email,TRIM(CONCAT(IF(r.prefix='Other','',r.prefix),' ',r.full_name)) name,CONCAT('R',LPAD(r.id,4,'0')) regno FROM registrations r JOIN users u ON u.id=r.user_id WHERE " . $w[$a])->fetchAll();
 }
 function clean($s) { return trim(str_replace(['|', "\r", "\n"], ' ', (string)$s)); }
-function jurl($s) { $s = trim((string)$s); if ($s !== '' && !preg_match('#^https?://#i', $s)) $s = 'https://' . $s; return clean($s); }
 function saveRows($key, $rs, $n) { $o = []; foreach ($rs as $r) { $r = array_pad($r, $n, ''); $o[] = implode('|', array_slice($r, 0, $n)); } setSetting($key, implode("\n", $o)); }
-function jrow() { return [clean(post('name')), jurl(post('url')), clean(post('accr')), clean(post('publisher')), clean(post('issn')), jurl(post('scope')), jurl(post('guide')), jurl(post('cover')), clean(post('note'))]; }
 
 /* ---------- ekspor ---------- */
 if ($p === 'exportreg') csvOut('registrasi-' . date('Ymd') . '.csv',
@@ -63,8 +61,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $st = in_array($_POST['status'] ?? '', ['pending', 'confirmed', 'rejected'], true) ? $_POST['status'] : 'pending';
         $pdo->prepare("UPDATE users SET status=? WHERE id=? AND role='peserta'")->execute([$st, $id]); break;
     case 'del': // hapus akun beserta pendaftaran, pembayaran, naskah, review, dan semua file privatnya
-        $bk = post('back'); $back = in_array($bk, ['peserta', 'pengguna', 'pengguna&role=reviewer', 'pengguna&role=bendahara'], true) ? '?p=' . $bk : '?p=pengguna';
-        $q = $pdo->prepare("SELECT * FROM users WHERE id=? AND role IN('peserta','reviewer','bendahara')"); $q->execute([$id]); $du = $q->fetch();
+        $bk = post('back'); $back = in_array($bk, ['peserta', 'pengguna', 'pengguna&role=reviewer', 'pengguna&role=bendahara', 'pengguna&role=jurnal'], true) ? '?p=' . $bk : '?p=pengguna';
+        $q = $pdo->prepare("SELECT * FROM users WHERE id=? AND role IN('peserta','reviewer','bendahara','jurnal')"); $q->execute([$id]); $du = $q->fetch();
         if (!$du) { $msg = 'Akun tidak ditemukan atau tidak boleh dihapus (akun admin).'; break; }
         if ((int)$du['id'] === (int)$u['id']) { $msg = 'Tidak bisa menghapus akun sendiri.'; break; }
         $info = [];
@@ -89,14 +87,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!validName($s['name']) || blockedEmail($s['email'])) { $pdo->prepare("DELETE FROM users WHERE id=?")->execute([$s['id']]); $n++; }
         $msg = "$n akun mencurigakan dihapus."; $back = '?p=pengguna'; break;
     case 'uadd': // akun reviewer / admin baru
-        $n = post('name'); $m = strtolower(post('email')); $role = in_array(post('role'), ['reviewer', 'admin', 'bendahara'], true) ? post('role') : 'reviewer';
+        $n = post('name'); $m = strtolower(post('email')); $role = in_array(post('role'), ['reviewer', 'admin', 'bendahara', 'jurnal'], true) ? post('role') : 'reviewer';
         $q = $pdo->prepare("SELECT id FROM users WHERE email=?"); $q->execute([$m]);
         if ($n === '' || !filter_var($m, FILTER_VALIDATE_EMAIL)) $msg = 'Nama dan email valid wajib diisi.';
         elseif ($q->fetch()) $msg = 'Email sudah terdaftar.';
         else {
             $pw = substr(strtr(base64_encode(random_bytes(9)), '+/=', 'xyz'), 0, 10);
             $pdo->prepare("INSERT INTO users(name,email,institution,password,role,status) VALUES(?,?,?,?,?,'confirmed')")->execute([$n, $m, post('institution'), password_hash($pw, PASSWORD_DEFAULT), $role]);
-            $sent = !empty($_POST['send']) && notify($m, $n, 'Your ' . $role . ' account', "An account has been created for you as $role of " . setting('name') . ".\n\nLogin: " . absUrl('login.php') . "\nEmail: $m\nPassword: $pw\n\nPlease change your password after logging in.", 'login.php');
+            $sent = !empty($_POST['send']) && notify($m, $n, 'Your ' . ($rl = ['reviewer' => 'reviewer', 'admin' => 'administrator', 'bendahara' => 'treasurer', 'jurnal' => 'journal coordinator'][$role]) . ' account', "An account has been created for you as $rl of " . setting('name') . ".\n\nLogin: " . absUrl('login.php') . "\nEmail: $m\nPassword: $pw\n\nPlease change your password after logging in.", 'login.php');
             $msg = 'Akun ' . $role . ' dibuat. Password awal: ' . $pw . ($sent ? ' (juga dikirim via email).' : ' (catat dan sampaikan; tidak ditampilkan lagi).');
         }
         $back = '?p=pengguna'; break;
@@ -107,8 +105,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         elseif ($q->fetch()) $msg = 'Email sudah dipakai akun lain.';
         else {
             $sv = in_array($_POST['status'] ?? '', ['pending', 'confirmed', 'rejected'], true) ? $_POST['status'] : 'pending';
-            $role = in_array(post('role'), ['peserta', 'reviewer', 'bendahara'], true) ? post('role') : 'peserta';
-            $pdo->prepare("UPDATE users SET name=?,email=?,institution=?,phone=?,category=?,status=?,role=? WHERE id=? AND role IN('peserta','reviewer','bendahara')")->execute([$n, $m, post('institution'), post('phone'), post('category'), $sv, $role, $id]);
+            $role = in_array(post('role'), ['peserta', 'reviewer', 'bendahara', 'jurnal'], true) ? post('role') : 'peserta';
+            $pdo->prepare("UPDATE users SET name=?,email=?,institution=?,phone=?,category=?,status=?,role=? WHERE id=? AND role IN('peserta','reviewer','bendahara','jurnal')")->execute([$n, $m, post('institution'), post('phone'), post('category'), $sv, $role, $id]);
             $msg = 'Akun diperbarui.'; $back = '?p=pengguna';
         }
         break;
@@ -116,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $back = '?p=edit&id=' . $id; $pw = (string)($_POST['password'] ?? '');
         if ($pw === '') $pw = substr(strtr(base64_encode(random_bytes(9)), '+/=', 'xyz'), 0, 10);
         if (strlen($pw) < 8) $msg = 'Password minimal 8 karakter.';
-        else { $q = $pdo->prepare("SELECT 1 FROM users WHERE id=? AND role IN('peserta','reviewer','bendahara')"); $q->execute([$id]); if ($q->fetch()) { setPassword($id, $pw); $msg = 'Password direset. Password baru: ' . $pw . ' (catat dan sampaikan ke pengguna; tidak ditampilkan lagi). Pengguna dikeluarkan dari sesi yang sedang aktif.'; } }
+        else { $q = $pdo->prepare("SELECT 1 FROM users WHERE id=? AND role IN('peserta','reviewer','bendahara','jurnal')"); $q->execute([$id]); if ($q->fetch()) { setPassword($id, $pw); $msg = 'Password direset. Password baru: ' . $pw . ' (catat dan sampaikan ke pengguna; tidak ditampilkan lagi). Pengguna dikeluarkan dari sesi yang sedang aktif.'; } }
         break;
     case 'regsave':
         $back = '?p=detail&id=' . $id;
@@ -163,47 +161,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = 'Agenda disimpan.'; break;
     case 'delag':
         $pdo->prepare("DELETE FROM agenda WHERE id=?")->execute([$id]); $msg = 'Sesi dihapus.'; break;
-    case 'jradd':
-        $r = jrow(); if ($r[0] === '') $msg = 'Nama jurnal wajib diisi.'; else { $rs = rows('journals'); $rs[] = $r; saveRows('journals', $rs, 9); $msg = 'Jurnal ditambahkan.'; } break;
-    case 'jredit': case 'jrdel':
-        $rs = rows('journals'); $i = (int)($_POST['i'] ?? -1);
-        if (!isset($rs[$i])) break;
-        if ($a === 'jredit') { $r = jrow(); if ($r[0] === '') $msg = 'Nama jurnal wajib diisi.'; else { $rs[$i] = $r; saveRows('journals', $rs, 9); $msg = 'Data jurnal diperbarui.'; } }
-        else { array_splice($rs, $i, 1); saveRows('journals', $rs, 9); $msg = 'Jurnal dihapus.'; }
-        break;
-    case 'boa': // susun draf Book of Abstracts (.docx)
-        $back = '?p=jurnal#susun';
-        require_once __DIR__ . '/../lib/boa.php';
-        if (!class_exists('ZipArchive')) { $msg = 'Server tidak mendukung ZipArchive (ekstensi PHP zip). Aktifkan di cPanel → Select PHP Version → Extensions → zip.'; break; }
-        $st = array_values(array_intersect((array)($_POST['st'] ?? []), ['accepted', 'revision', 'under_review', 'submitted']));
-        if (!$st) { $msg = 'Pilih minimal satu status naskah.'; break; }
-        $secs = array_values(array_intersect((array)($_POST['sec'] ?? []), ['colophon', 'welcome', 'committee', 'toc', 'program', 'speakers', 'index', 'journals', 'sponsors']));
-        $sort = in_array(post('sort'), ['title', 'author', 'id'], true) ? post('sort') : 'title';
-        $n = 0; $f = boaBuild(['statuses' => $st, 'paid' => !empty($_POST['paid']), 'sort' => $sort, 'email' => !empty($_POST['email']), 'onepage' => !empty($_POST['onepage']), 'sections' => $secs], $n);
-        if (!$f) { $msg = 'Gagal membuat file Word (folder sementara server tidak bisa ditulisi).'; break; }
-        header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-        header('Content-Disposition: attachment; filename="Draft-Book-of-Abstracts-' . preg_replace('/[^A-Za-z0-9-]/', '', brand()) . '-' . date('Ymd') . '.docx"');
-        header('Content-Length: ' . filesize($f)); header('Cache-Control: no-store');
-        readfile($f); @unlink($f); exit;
-    case 'bookset': // Book of Abstracts (flipbook)
-        $back = '?p=jurnal';
-        foreach (['book_title', 'book_link_label', 'book_link_url', 'book_link_note'] as $k) setSetting($k, trim((string)($_POST[$k] ?? '')));
-        foreach (['book_on', 'book_link_req', 'book_zoom'] as $k) setSetting($k, empty($_POST[$k]) ? '0' : '1');
-        $note = [];
-        if (setting('book_link_url') !== '' && !isurl(setting('book_link_url'))) { setSetting('book_link_url', ''); $note[] = 'Link tambahan harus diawali https:// (dikosongkan).'; }
-        $old = setting('book_pdf'); $mine = strpos($old, 'uploads/dl_') === 0; // hanya hapus file yang diunggah lewat sini
-        if (!empty($_POST['book_rm'])) { if ($mine) @unlink(__DIR__ . '/../' . $old); setSetting('book_pdf', ''); setSetting('book_name', ''); $note[] = 'File PDF dihapus.'; }
-        if (!empty($_FILES['book']['name'])) {
-            $er = ''; $f = upFile($_FILES['book'], ['pdf'], $er, 'File PDF', true, 80);
-            if ($f) { if ($mine && empty($_POST['book_rm'])) @unlink(__DIR__ . '/../' . $old); setSetting('book_pdf', 'uploads/' . $f[0]); setSetting('book_name', $f[1]); $note[] = 'PDF "' . $f[1] . '" diunggah.'; }
-            else $note[] = $er . ' Untuk file besar, unggah lewat File Manager cPanel ke folder uploads lalu isi kolom "atau nama file di server".';
-        } elseif (($pth = ltrim(trim(post('book_path')), '/')) !== '' && $pth !== $old) {
-            if (strpos($pth, 'uploads/') !== 0) $pth = 'uploads/' . $pth;
-            if (preg_match('#^uploads/[A-Za-z0-9._/-]+\.pdf$#i', $pth) && strpos($pth, '..') === false && is_file(__DIR__ . '/../' . $pth)) { if ($mine) @unlink(__DIR__ . '/../' . $old); setSetting('book_pdf', $pth); setSetting('book_name', basename($pth)); $note[] = 'Memakai file ' . $pth . '.'; }
-            else $note[] = 'File "' . $pth . '" tidak ditemukan (nama file hanya boleh huruf, angka, titik, minus, garis bawah; berakhiran .pdf).';
-        }
-        if (setting('book_on') === '1' && !bookFile()) $note[] = 'Buku belum tampil karena file PDF belum ada.';
-        $msg = trim('Pengaturan Book of Abstracts disimpan. ' . implode(' ', $note)); break;
+    case 'jradd': case 'jredit': case 'jrdel': case 'jrup': case 'jrdown':
+        $msg = jrnHandle($a, $u); $back = '?p=jurnal'; break;
     case 'spadd':
         $n = clean(post('name'));
         if ($n === '') { $msg = 'Nama pembicara wajib diisi.'; break; }

@@ -1,7 +1,7 @@
 <?php if (!defined('ADMIN')) exit;
-$role = in_array($_GET['role'] ?? '', ['peserta', 'reviewer', 'bendahara', 'admin'], true) ? $_GET['role'] : 'peserta';
+$role = in_array($_GET['role'] ?? '', ['peserta', 'reviewer', 'bendahara', 'jurnal', 'admin'], true) ? $_GET['role'] : 'peserta';
 $r = $pdo->prepare("SELECT u.*,(SELECT COUNT(*) FROM registrations r WHERE r.user_id=u.id) hasreg,(SELECT COUNT(*) FROM reviews v WHERE v.reviewer_id=u.id) nrev FROM users u WHERE role=? ORDER BY id DESC"); $r->execute([$role]); $r = $r->fetchAll(); ?>
-<p class="tabs small"><?php foreach (['peserta' => 'Peserta', 'reviewer' => 'Reviewer', 'bendahara' => 'Bendahara', 'admin' => 'Admin'] as $k => $l): ?><a href="?p=pengguna&role=<?= $k ?>" class="<?= $role === $k ? 'on' : '' ?>"><?= $l ?></a><?php endforeach; ?></p>
+<p class="tabs small"><?php foreach (['peserta' => 'Peserta', 'reviewer' => 'Reviewer', 'bendahara' => 'Bendahara', 'jurnal' => 'Koordinator Jurnal', 'admin' => 'Admin'] as $k => $l): ?><a href="?p=pengguna&role=<?= $k ?>" class="<?= $role === $k ? 'on' : '' ?>"><?= $l ?></a><?php endforeach; ?></p>
 <?php $sus = 0; if ($role === 'peserta') foreach ($r as $x) if (!$x['hasreg'] && (!validName($x['name']) || blockedEmail($x['email']))) $sus++; ?>
 <p>Total akun: <b><?= count($r) ?></b> &middot; <a href="?p=export">Ekspor akun (CSV)</a></p>
 <?php if ($sus): ?><div class="msg err"><b><?= $sus ?> akun mencurigakan</b> (nama berisi tautan/simbol atau email sementara, dan belum mengisi formulir). Kemungkinan besar dibuat oleh bot spam.
@@ -11,8 +11,8 @@ $r = $pdo->prepare("SELECT u.*,(SELECT COUNT(*) FROM registrations r WHERE r.use
 <?php if ($role === 'peserta'): ?><td><form method="post" class="inline"><?= csrf() ?><input type="hidden" name="a" value="status"><input type="hidden" name="id" value="<?= $x['id'] ?>">
 <select name="status" onchange="this.form.submit()"><?php foreach ($ULBL as $s => $l): ?><option value="<?= $s ?>" <?= $x['status'] === $s ? 'selected' : '' ?>><?= e($l) ?></option><?php endforeach; ?></select></form></td><?php endif; ?>
 <td class="nowrap"><?php if ($role === 'reviewer'): ?><a class="js-doc" data-title="Sertifikat reviewer · <?= e($x['name']) ?>" href="../doc.php?t=revcert&uid=<?= $x['id'] ?>" target="_blank">Sertifikat</a> &nbsp; <?php endif; ?><?php if ($role !== 'admin'): ?><a href="?p=edit&id=<?= $x['id'] ?>">Edit</a> &nbsp; <form method="post" class="inline" data-confirm="Hapus akun ini beserta data pendaftaran/review dan file-nya?"><?= csrf() ?><input type="hidden" name="a" value="del"><input type="hidden" name="id" value="<?= $x['id'] ?>"><input type="hidden" name="back" value="<?= $role === 'peserta' ? 'pengguna' : 'pengguna&role=' . $role ?>"><button class="link">Hapus</button></form><?php endif; ?></td></tr><?php endforeach; ?></table></div>
-<h3>Tambah Akun Reviewer / Bendahara / Admin</h3>
+<h3>Tambah Akun Reviewer / Bendahara / Koordinator Jurnal / Admin</h3>
 <form method="post" class="card"><?= csrf() ?><input type="hidden" name="a" value="uadd">
 <label>Nama (beserta gelar) *<input name="name" required></label><label>Email *<input type="email" name="email" required></label>
-<label>Institusi<input name="institution"></label><label>Peran<select name="role"><option value="reviewer">Reviewer</option><option value="bendahara">Bendahara (keuangan)</option><option value="admin">Admin</option></select></label>
+<label>Institusi<input name="institution"></label><label>Peran<select name="role"><option value="reviewer">Reviewer</option><option value="bendahara">Bendahara (keuangan)</option><option value="jurnal">Koordinator Jurnal (kelola jurnal di beranda)</option><option value="admin">Admin</option></select></label>
 <label class="chk full"><input type="checkbox" name="send" value="1" checked> Kirim info login (password acak) ke email</label><button class="btn">Buat Akun</button></form>

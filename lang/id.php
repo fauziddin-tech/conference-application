@@ -411,4 +411,6 @@ return [
     'Today' => 'Hari ini',
     'Tomorrow' => 'Besok',
     'In %d days' => '%d hari lagi',
+    'Journals' => 'Jurnal',
+    'Journal Coordinator' => 'Koordinator Jurnal',
 ];

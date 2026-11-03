@@ -85,6 +85,10 @@ Batas unggah file 10 MB per file — sesuaikan `upload_max_filesize`/`post_max_s
 Email massal dikirim lewat endpoint batch Resend (maks. 100 email per permintaan). Perhatikan kuota paket Resend Anda.
 Hosting harus mengaktifkan ekstensi PHP **cURL**.
 
+## Koordinator Jurnal
+
+Peran **Koordinator Jurnal** (dibuat admin di Akun → Tambah Akun) hanya bisa membuka halaman `jurnal.php`: menambah, mengubah, mengurutkan, dan menghapus jurnal mitra yang tampil di bagian *Publication Opportunities* beranda. Setiap perubahan oleh koordinator dikirim sebagai notifikasi ke admin. Admin tetap bisa mengelola jurnal di Admin → Publikasi.
+
 ## Keuangan (admin & bendahara)
 
 Halaman `keuangan.php` untuk admin dan peran **Bendahara** (dibuat admin di Akun; bendahara hanya bisa membuka Keuangan, bukti bayar, invoice & kwitansi):

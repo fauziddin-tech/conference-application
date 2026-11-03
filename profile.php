@@ -3,7 +3,7 @@
  * Profil akun untuk semua peran (admin, peserta, reviewer, bendahara):
  * data diri, ganti email, ganti password, keluar dari perangkat lain.
  */
-$ROLES = ['admin' => t('Administrator'), 'peserta' => t('Participant'), 'reviewer' => t('Reviewer'), 'bendahara' => t('Treasurer')];
+$ROLES = ['admin' => t('Administrator'), 'peserta' => t('Participant'), 'reviewer' => t('Reviewer'), 'bendahara' => t('Treasurer'), 'jurnal' => t('Journal Coordinator')];
 $checkPw = function () use ($u) { // verifikasi password saat ini + batasi percobaan salah
     $k = 'pwchk:' . $u['id'];
     if (throttled($k, 8, 900)) return t('Too many attempts. Try again in 15 minutes.');

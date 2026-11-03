@@ -4,7 +4,7 @@
  * Dipakai oleh install/ (instalasi baru) dan inc.php (upgrade otomatis instalasi lama).
  * Setiap perubahan skema: naikkan DB_VERSION dan tambahkan langkahnya di migrate().
  */
-const DB_VERSION = 10;
+const DB_VERSION = 11;
 
 function colExists(PDO $pdo, $t, $c)
 {
@@ -32,7 +32,7 @@ function migrate(PDO $pdo)
     $pdo->exec("CREATE TABLE IF NOT EXISTS registrations(id INT AUTO_INCREMENT PRIMARY KEY,user_id INT NOT NULL UNIQUE,prefix VARCHAR(20),full_name VARCHAR(150),country VARCHAR(100),orcid VARCHAR(40),phone VARCHAR(30),category VARCHAR(100),attendance VARCHAR(10),article_title VARCHAR(300),coauthors TEXT,abstract TEXT,keywords VARCHAR(300),article_file VARCHAR(100),article_name VARCHAR(200),pay_amount VARCHAR(60),pay_date DATE NULL,pay_sender VARCHAR(150),pay_file VARCHAR(100),pay_name VARCHAR(200),dietary VARCHAR(150),paper_status ENUM('submitted','under_review','revision','accepted','rejected') DEFAULT 'submitted',pay_status ENUM('unpaid','pending','verified','rejected') DEFAULT 'pending',admin_note TEXT,agreed TINYINT DEFAULT 0,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)$E");
 
     // --- v2: kolom baru pada tabel lama ---
-    $pdo->exec("ALTER TABLE users MODIFY role ENUM('admin','peserta','reviewer') DEFAULT 'peserta'");
+    $pdo->exec("ALTER TABLE users MODIFY role ENUM('admin','peserta','reviewer','bendahara','jurnal') DEFAULT 'peserta'");
     addCol($pdo, 'users', 'reset_hash', 'VARCHAR(64) NULL');
     addCol($pdo, 'users', 'reset_exp', 'INT NULL');
     addCol($pdo, 'users', 'last_login', 'DATETIME NULL');
@@ -88,7 +88,8 @@ function migrate(PDO $pdo)
     addCol($pdo, 'users', 'sess_ver', 'INT NOT NULL DEFAULT 0');
 
     // --- v10: keuangan (angka pembayaran, buku kas, peran bendahara) ---
-    $pdo->exec("ALTER TABLE users MODIFY role ENUM('admin','peserta','reviewer','bendahara') DEFAULT 'peserta'");
+    // v11: + peran koordinator jurnal ('jurnal')
+    $pdo->exec("ALTER TABLE users MODIFY role ENUM('admin','peserta','reviewer','bendahara','jurnal') DEFAULT 'peserta'");
     addCol($pdo, 'registrations', 'pay_currency', 'CHAR(3) NULL');
     addCol($pdo, 'registrations', 'pay_received', 'DECIMAL(14,2) NULL');
     addCol($pdo, 'registrations', 'pay_verified_at', 'DATETIME NULL');
